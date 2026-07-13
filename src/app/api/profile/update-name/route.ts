@@ -1,0 +1,35 @@
+import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function POST(req: NextRequest) {
+  try {
+    const { user_id, full_name, email } = await req.json();
+
+    if (!user_id) {
+      return NextResponse.json({ error: "Missing user_id" }, { status: 400 });
+    }
+
+    const updates: any = {};
+    if (full_name) updates.full_name = full_name;
+    if (email) updates.email = email;
+    updates.updated_at = new Date().toISOString();
+
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(updates)
+      .eq("user_id", user_id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
