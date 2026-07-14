@@ -25,26 +25,78 @@ export function useSubscription() {
 
   useEffect(() => { refetch(); }, [refetch]);
 
+  // Auto-sync when session_id is in the URL (returned from Stripe checkout)
+  useEffect(() => {
+    if (!user || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    if (!sessionId) return;
+
+    let attempts = 0;
+    const doSync = () => {
+      fetch("/api/subscription/sync-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, session_id: sessionId }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success) {
+            refetch();
+            window.history.replaceState({}, "", window.location.pathname);
+          } else if (attempts < 10) {
+            attempts++;
+            setTimeout(doSync, 2000);
+          } else {
+            alert("Payment received but plan sync failed. Please refresh the page.");
+          }
+        })
+        .catch(() => {
+          if (attempts < 10) {
+            attempts++;
+            setTimeout(doSync, 2000);
+          }
+        });
+    };
+    doSync();
+  }, [user, refetch]);
+
   const createCheckoutSession = async (plan: string) => {
     if (!user) return;
-    const res = await fetch("/api/subscription/create-checkout-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: user.id, plan }),
-    });
-    const { url } = await res.json();
-    if (url) window.location.href = url;
+    try {
+      const res = await fetch("/api/subscription/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, plan }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        alert(data.error || "Something went wrong. Please try again.");
+      }
+    } catch (err) {
+      alert("Failed to start checkout. Please try again.");
+    }
   };
 
   const openPortal = async () => {
     if (!user) return;
-    const res = await fetch("/api/subscription/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: user.id }),
-    });
-    const { url } = await res.json();
-    if (url) window.location.href = url;
+    try {
+      const res = await fetch("/api/subscription/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        alert(data.error || "Please upgrade to a paid plan first, then you can manage billing.");
+      }
+    } catch (err) {
+      alert("Failed to open billing portal.");
+    }
   };
 
   const cancelSubscription = async () => {

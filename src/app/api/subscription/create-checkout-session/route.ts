@@ -9,7 +9,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { user_id, plan } = await req.json();
+    const { user_id, plan, role } = await req.json();
 
     if (!user_id || !plan || !["pro", "premium"].includes(plan)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -17,13 +17,17 @@ export async function POST(req: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("id, email, full_name")
+      .select("id, email, full_name, role")
       .eq("user_id", user_id)
       .single();
 
     if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
+
+    // Determine correct settings URL based on role
+    const rolePath = profile.role === "student" ? "/student/settings" : "/teacher/settings";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     // Get or create Stripe customer
     const { data: sub } = await supabaseAdmin
@@ -49,8 +53,8 @@ export async function POST(req: NextRequest) {
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: planConfig.priceId!, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings`,
+      success_url: `${baseUrl}${rolePath}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}${rolePath}`,
       metadata: { profile_id: profile.id, plan },
     });
 

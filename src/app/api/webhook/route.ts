@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
 
+
+function toISO(ts: any): string | null {
+  if (!ts) return null;
+  const num = typeof ts === "number" ? ts : parseInt(ts);
+  if (isNaN(num)) return null;
+  const ms = num > 100000000000 ? num : num * 1000;
+  return new Date(ms).toISOString();
+}
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -41,8 +50,8 @@ export async function POST(req: NextRequest) {
           stripe_subscription_id: subscriptionId,
           plan,
           status: sub.status,
-          current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          current_period_start: toISO(sub.current_period_start),
+          current_period_end: toISO(sub.current_period_end),
         });
         break;
       }
@@ -58,8 +67,8 @@ export async function POST(req: NextRequest) {
           .from("subscriptions")
           .update({
             status: sub.status,
-            current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            current_period_start: toISO(sub.current_period_start),
+            current_period_end: toISO(sub.current_period_end),
           })
           .eq("stripe_subscription_id", subscriptionId);
         break;
@@ -72,8 +81,8 @@ export async function POST(req: NextRequest) {
           .from("subscriptions")
           .update({
             status: sub.status,
-            current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            current_period_start: toISO(sub.current_period_start),
+            current_period_end: toISO(sub.current_period_end),
           })
           .eq("stripe_subscription_id", sub.id);
         break;

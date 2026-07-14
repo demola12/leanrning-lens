@@ -17,13 +17,16 @@ export async function POST(req: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("id")
+      .select("id, role")
       .eq("user_id", user_id)
       .single();
 
     if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
+
+    const rolePath = profile.role === "student" ? "/student/settings" : "/teacher/settings";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings`,
+      return_url: `${baseUrl}${rolePath}`,
     });
 
     return NextResponse.json({ url: session.url });
