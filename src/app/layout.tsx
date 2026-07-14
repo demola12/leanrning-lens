@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/AuthContext";
+import Script from "next/script";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -21,7 +22,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${plusJakarta.variable} h-full antialiased`}>
+      <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mathlive/dist/mathlive-static.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mathlive/dist/mathlive-fonts.css" />
+      </head>
       <body className="min-h-full flex flex-col bg-white">
+        <Script
+          src="https://cdn.jsdelivr.net/npm/mathlive@0.104.0/dist/mathlive.min.js"
+          strategy="beforeInteractive"
+        />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

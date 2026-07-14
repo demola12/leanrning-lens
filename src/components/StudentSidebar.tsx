@@ -28,7 +28,7 @@ export default function StudentSidebar() {
     <div className="w-64 shrink-0 h-screen bg-white border-r border-gray-100 flex flex-col">
       <div className="p-5 border-b border-gray-100">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0">
             <img src="/logo.png" alt="LearnLens" className="w-5 h-5" />
           </div>
           <span className="font-bold text-xl text-gray-900">LearnLens</span>

@@ -259,7 +259,7 @@ export default function SettingsPage() {
               <div className="text-sm text-gray-500">
                 <span className="font-medium">Reference UUID: </span>
                 <code className="text-xs font-mono text-gray-600">{profile?.ref_uuid}</code>
-                <span className="text-gray-400 ml-1">— Share this with your teacher to connect</span>
+                <span className="text-gray-400 ml-1">— Share this with your student to connect</span>
               </div>
             </div>
 

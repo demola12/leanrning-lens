@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Reorder, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
@@ -18,16 +18,15 @@ import {
   Circle,
   Star,
   Save,
-  Send,
   ChevronDown,
   FileText,
   AlertCircle,
-  Edit3,
-  Image as ImageIcon,
   Loader2,
-  X,
   Clock,
+  Pencil,
+  X,
 } from "lucide-react";
+import QuestionEditorModal from "@/components/QuestionEditorModal";
 
 type QuestionType = "multiple_choice" | "true_false" | "short_answer" | "essay" | "rating";
 
@@ -67,47 +66,6 @@ function createQuestion(type: QuestionType): Question {
   }
 }
 
-function ImageUploadButton({
-  user,
-  currentImage,
-  onUpload,
-  onRemove,
-}: {
-  user: any;
-  currentImage?: string;
-  onUpload: (url: string) => void;
-  onRemove: () => void;
-}) {
-  const [uploading, setUploading] = useState(false);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("user_id", user.id);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.url) onUpload(data.url);
-    setUploading(false);
-  };
-
-  return (
-    <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-      currentImage ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200"
-    }`}>
-      {uploading ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-      ) : (
-        <ImageIcon className="w-3.5 h-3.5" />
-      )}
-      {uploading ? "Uploading..." : currentImage ? "Image Added" : "Add Image"}
-      <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
-    </label>
-  );
-}
-
 export default function ManualBuilderPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -120,6 +78,7 @@ export default function ManualBuilderPage() {
   const [saving, setSaving] = useState(false);
   const [timeLimitEnabled, setTimeLimitEnabled] = useState(false);
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(30);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
 
   const addQuestion = (type: QuestionType) => {
     const q = createQuestion(type);
@@ -210,112 +169,40 @@ export default function ManualBuilderPage() {
     router.push("/teacher/assignments");
   };
 
-  const QuestionEditor = ({ question }: { question: Question }) => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <input
-            type="text"
-            value={question.title}
-            onChange={(e) => updateQuestion(question.id, { title: e.target.value })}
-            placeholder="Enter your question..."
-            className="w-full text-lg font-semibold bg-transparent border-0 border-b-2 border-gray-100 focus:border-primary focus:ring-0 pb-2 text-gray-900 placeholder-gray-300 outline-none transition-colors"
-          />
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="text-xs text-gray-400 font-semibold">Pts</span>
-          <input
-            type="number"
-            min={1}
-            value={question.points}
-            onChange={(e) => updateQuestion(question.id, { points: Math.max(1, parseInt(e.target.value) || 1) })}
-            className="w-14 px-2 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold text-center focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-      </div>
+  const editingQuestion = editingQuestionId ? questions.find((q) => q.id === editingQuestionId) : null;
 
-      {/* Multiple Choice */}
-      {question.type === "multiple_choice" && (
-        <div className="space-y-2">
-          {question.options?.map((opt, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div className={`w-5 h-5 rounded-full border-2 shrink-0 ${question.correctAnswer === String.fromCharCode(65 + i) ? "border-primary bg-primary" : "border-gray-300"}`} />
-              <input
-                type="text"
-                value={opt}
-                onChange={(e) => updateOption(question.id, i, e.target.value)}
-                placeholder={`Option ${String.fromCharCode(65 + i)}`}
-                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
-              <button
-                onClick={() => updateQuestion(question.id, { correctAnswer: String.fromCharCode(65 + i) })}
-                className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${question.correctAnswer === String.fromCharCode(65 + i) ? "bg-emerald-50 text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
-              >
-                Correct
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+  function renderMath(text: string) {
+    if (!text) return text;
+    const cleaned = text.replace(/\\placeholder\{[^}]*\}/g, "");
+    const parts = cleaned.split(/(\$\$.+?\$\$|\$.+?\$)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("$$") && part.endsWith("$$")) {
+        return <Katex key={i} math={part.slice(2, -2)} block />;
+      }
+      if (part.startsWith("$") && part.endsWith("$")) {
+        return <Katex key={i} math={part.slice(1, -1)} />;
+      }
+      return <span key={i} className="break-words">{part}</span>;
+    });
+  }
 
-      {/* True/False */}
-      {question.type === "true_false" && (
-        <div className="flex gap-3">
-          {["True", "False"].map((val) => (
-            <button
-              key={val}
-              onClick={() => updateQuestion(question.id, { correctAnswer: val })}
-              className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold transition-all ${
-                question.correctAnswer === val
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-gray-200 text-gray-500 hover:border-gray-300"
-              }`}
-            >
-              {val}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Short Answer */}
-      {question.type === "short_answer" && (
-        <div>
-          <input
-            type="text"
-            value={question.correctAnswer || ""}
-            onChange={(e) => updateQuestion(question.id, { correctAnswer: e.target.value })}
-            placeholder="Expected answer (optional)"
-            className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-          <p className="text-xs text-gray-400 mt-1">Leave blank for manual grading</p>
-        </div>
-      )}
-
-      {/* Essay */}
-      {question.type === "essay" && (
-        <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
-          <p className="text-sm text-gray-400">Essay answer — students will write their response here</p>
-        </div>
-      )}
-
-      {/* Rating */}
-      {question.type === "rating" && (
-        <div className="flex items-center gap-2">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              className="w-12 h-12 rounded-lg border-2 border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-400 transition-all text-lg"
-            >
-              ★
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  function Katex({ math, block }: { math: string; block?: boolean }) {
+    const ref = useRef<HTMLSpanElement>(null);
+    useEffect(() => {
+      import("katex").then((katex) => {
+        if (ref.current) {
+          ref.current.innerHTML = katex.default.renderToString(math, {
+            displayMode: !!block,
+            throwOnError: false,
+          });
+        }
+      });
+    }, [math, block]);
+    return <span ref={ref} className={block ? "block text-center py-2 overflow-x-auto" : "inline"} />;
+  }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Top Bar */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-white shrink-0">
         <button
@@ -465,7 +352,7 @@ export default function ManualBuilderPage() {
         )}
 
         {/* Main Editor / Preview */}
-        <div className="flex-1 overflow-y-auto bg-white">
+        <div className="flex-1 overflow-y-auto bg-white overflow-x-hidden">
           {error && (
             <div className="flex items-center gap-2 px-8 py-3 bg-red-50 border-b border-red-100 text-red-600 text-sm">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -473,25 +360,34 @@ export default function ManualBuilderPage() {
             </div>
           )}
           {preview ? (
-            <div className="max-w-2xl mx-auto p-8">
-              <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+            <div className="max-w-2xl mx-auto p-8 overflow-x-hidden">
+              <div className="mb-8 overflow-x-hidden">
+                <h1 className="text-2xl font-bold text-gray-900 break-words">{title}</h1>
                 <p className="text-sm text-gray-400 mt-1">{questions.length} questions · {totalPoints} points</p>
               </div>
               <div className="space-y-8">
                 {questions.map((q, i) => (
                   <div key={q.id} className="p-6 rounded-lg border border-gray-100 bg-white shadow-sm">
                     <div className="flex items-start justify-between mb-4">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <span className="text-xs font-semibold text-gray-400 uppercase">{q.type.replace("_", " ")}</span>
-                        <h3 className="text-base font-semibold text-gray-900 mt-0.5">
-                          {i + 1}. {q.title || "Untitled question"}
+                        <h3 className="text-base font-semibold text-gray-900 mt-0.5 break-words overflow-x-hidden">
+                          {i + 1}. {renderMath(q.title || "Untitled question")}
                         </h3>
                         {q.image_url && (
                           <img src={q.image_url} alt="" className="mt-3 max-h-40 rounded-lg border border-gray-100 object-contain" />
                         )}
                       </div>
-                      <span className="text-xs font-semibold text-gray-400">{q.points} pt{q.points !== 1 ? "s" : ""}</span>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <button
+                          onClick={() => setEditingQuestionId(q.id)}
+                          className="p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
+                          title="Edit question text"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <span className="text-xs font-semibold text-gray-400">{q.points} pt{q.points !== 1 ? "s" : ""}</span>
+                      </div>
                     </div>
 
                     {q.type === "multiple_choice" && (
@@ -562,20 +458,23 @@ export default function ManualBuilderPage() {
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         <div className="flex-1">
-                          <input
-                            type="text"
-                            defaultValue={q.title || ""}
-                            onChange={(e) => updateQuestion(q.id, { title: e.target.value })}
-                            placeholder="Enter your question..."
-                            className="w-full text-lg font-semibold bg-transparent border-0 border-b-2 border-gray-100 focus:border-primary focus:ring-0 pb-2 text-gray-900 placeholder-gray-300 outline-none transition-colors"
-                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={q.title || ""}
+                              onChange={(e) => updateQuestion(q.id, { title: e.target.value })}
+                              placeholder="Enter question..."
+                              className="text-lg font-semibold bg-transparent border-0 border-b-2 border-gray-100 focus:border-primary focus:ring-0 pb-0.5 text-gray-900 placeholder-gray-300 outline-none transition-colors flex-1 min-w-0"
+                            />
+                            <button
+                              onClick={() => setEditingQuestionId(q.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all shrink-0"
+                              title="Open rich editor with math and images"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                        <ImageUploadButton
-                          user={user}
-                          currentImage={q.image_url}
-                          onUpload={(url) => updateQuestion(q.id, { image_url: url })}
-                          onRemove={() => updateQuestion(q.id, { image_url: undefined })}
-                        />
                         <div className="flex items-center gap-1 shrink-0">
                           <span className="text-xs text-gray-400 font-semibold">Pts</span>
                           <input
@@ -679,6 +578,18 @@ export default function ManualBuilderPage() {
           )}
         </div>
       </div>
+
+      {editingQuestion && (
+        <QuestionEditorModal
+          title={editingQuestion.title}
+          onChangeTitle={(v) => updateQuestion(editingQuestion.id, { title: v })}
+          imageUrl={editingQuestion.image_url}
+          onUploadImage={(url) => updateQuestion(editingQuestion.id, { image_url: url })}
+          onRemoveImage={() => updateQuestion(editingQuestion.id, { image_url: undefined })}
+          userId={user?.id || ""}
+          onClose={() => setEditingQuestionId(null)}
+        />
+      )}
     </div>
   );
 }

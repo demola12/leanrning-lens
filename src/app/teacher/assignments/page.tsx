@@ -19,9 +19,11 @@ import {
   Sparkles,
   Loader2,
 } from "lucide-react";
+import PdfUploadForm from "@/components/PdfUploadForm";
+import AutoBuilderForm from "@/components/AutoBuilderForm";
 
 type Tab = "templates" | "assigned";
-type ModalView = null | "new";
+type ModalView = null | "new" | "upload-pdf" | "ai-topic";
 
 interface Assignment {
   id: string;
@@ -102,6 +104,9 @@ export default function TeacherAssignmentsPage() {
   const handleAssign = (id: string) => {
     router.push(`/teacher/assignments/detail?id=${id}`);
   };
+
+  const handleUploadPdf = () => setModal("upload-pdf");
+  const handleAITopic = () => setModal("ai-topic");
 
   const timeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
@@ -287,8 +292,8 @@ export default function TeacherAssignmentsPage() {
                 <p className="text-sm text-gray-500">How would you like to create this assignment?</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
-                    { icon: FileUp, title: "Upload PDF", desc: "Extract questions from any PDF automatically", color: "text-primary", action: () => {} },
-                    { icon: Sparkles, title: "AI Builder", desc: "Generate questions with AI from any topic", color: "text-accent", action: () => {} },
+                    { icon: FileUp, title: "Upload PDF", desc: "Extract questions from any PDF automatically", color: "text-primary", action: () => { closeModal(); handleUploadPdf(); } },
+                    { icon: Sparkles, title: "Auto Builder", desc: "Generate questions from a topic or pasted text", color: "text-accent", action: () => { closeModal(); handleAITopic(); } },
                     { icon: PenLine, title: "Manual Builder", desc: "Write your own questions from scratch", color: "text-emerald-500", action: () => { closeModal(); router.push("/teacher/assignments/create"); } },
                   ].map((opt) => (
                     <button
@@ -309,6 +314,60 @@ export default function TeacherAssignmentsPage() {
                   ))}
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {modal === "upload-pdf" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setModal(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900">Upload PDF</h2>
+                <button onClick={() => setModal(null)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <PdfUploadForm userId={user!.id} onSuccess={() => { setModal(null); fetchAssignments(); }} />
+            </motion.div>
+          </motion.div>
+        )}
+
+        {modal === "ai-topic" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setModal(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900">Auto Builder</h2>
+                <button onClick={() => setModal(null)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <AutoBuilderForm userId={user!.id} onSuccess={() => { setModal(null); fetchAssignments(); }} />
             </motion.div>
           </motion.div>
         )}
