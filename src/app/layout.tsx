@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "LearnLens — AI-Powered Personalized Learning",
   description:
     "Teachers create assignments in minutes. Students receive AI-powered feedback, discover strengths and weaknesses, and get personalized study plans.",
+  icons: "/logo.png",
 };
 
 export default function RootLayout({
