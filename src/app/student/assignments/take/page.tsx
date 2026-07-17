@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
+import { useProfiles } from "@/lib/ProfilesContext";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -19,6 +20,7 @@ export default function TakeAssignmentPage() {
   const searchParams = useSearchParams();
   const assignedId = searchParams.get("id");
   const { user } = useAuth();
+  const { activeProfile } = useProfiles();
 
   const [assignment, setAssignment] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -32,9 +34,12 @@ export default function TakeAssignmentPage() {
   useEffect(() => {
     if (!assignedId || !user) return;
     const load = async () => {
-      const res = await fetch(`/api/student/assignments?user_id=${user.id}`);
-      const data = await res.json();
-      const found = (data.assignments || []).find((a: any) => a.id === assignedId);
+      const res = await fetch(`/api/student/assignment-detail?assigned_id=${assignedId}`);
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
+      const found = await res.json();
       if (found) {
         setAssignment(found);
         const qs = found.assignment?.questions || [];
@@ -83,7 +88,12 @@ export default function TakeAssignmentPage() {
     const res = await fetch("/api/student/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: user.id, assigned_id: assignedId, answers }),
+      body: JSON.stringify({
+        user_id: user.id,
+        profile_id: activeProfile?.id,
+        assigned_id: assignedId,
+        answers,
+      }),
     });
 
     const data = await res.json();

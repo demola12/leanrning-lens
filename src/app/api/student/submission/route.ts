@@ -8,10 +8,11 @@ const supabaseAdmin = createClient(
 
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("user_id");
+  const profileId = req.nextUrl.searchParams.get("profile_id");
   const assignedId = req.nextUrl.searchParams.get("assigned_id");
 
-  if (!userId || !assignedId) {
-    return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
+  if (!assignedId) {
+    return NextResponse.json({ error: "Missing assigned_id" }, { status: 400 });
   }
 
   // Get the assigned record to find the cache path

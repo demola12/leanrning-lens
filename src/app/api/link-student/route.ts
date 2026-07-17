@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { logActivity } from "@/lib/activities";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     // Get teacher profile by ref_uuid
     const { data: teacher, error: tErr } = await supabaseAdmin
       .from("profiles")
-      .select("id")
+      .select("id, full_name")
       .eq("ref_uuid", teacher_ref.toUpperCase())
       .single();
 
@@ -56,6 +57,14 @@ export async function POST(req: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await logActivity({
+      teacher_id: teacher.id,
+      type: "student_joined",
+      description: `${student.full_name} joined via invite`,
+      student_id: student.id,
+      metadata: { student_name: student.full_name },
+    });
 
     return NextResponse.json({ success: true, student });
   } catch (err: any) {

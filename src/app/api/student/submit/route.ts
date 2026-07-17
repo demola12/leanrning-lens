@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { logActivity } from "@/lib/activities";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,17 +9,30 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { user_id, assigned_id, answers } = await req.json();
+    const { user_id, profile_id, assigned_id, answers } = await req.json();
 
-    if (!user_id || !assigned_id || !answers) {
+    if (!assigned_id || !answers) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const { data: student } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user_id)
-      .single();
+    let student;
+    if (profile_id) {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name")
+        .eq("id", profile_id)
+        .single();
+      student = data;
+    } else if (user_id) {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name")
+        .eq("user_id", user_id)
+        .single();
+      student = data;
+    } else {
+      return NextResponse.json({ error: "Missing user_id or profile_id" }, { status: 400 });
+    }
 
     if (!student) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
@@ -108,6 +122,21 @@ export async function POST(req: NextRequest) {
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
+
+    const isResubmission = assigned.status === "submitted" || assigned.status === "graded" || assigned.status === "reviewed";
+    await logActivity({
+      teacher_id: assigned.teacher_id,
+      type: isResubmission ? "student_resubmitted" : "student_submitted",
+      description: `${student.full_name} ${isResubmission ? "resubmitted" : "submitted"} ${assigned.assignment?.title || "an assignment"}`,
+      student_id: student.id,
+      assignment_id: assigned.assignment_id,
+      metadata: {
+        student_name: student.full_name,
+        assignment_title: assigned.assignment?.title,
+        score,
+        is_resubmission: isResubmission,
+      },
+    });
 
     return NextResponse.json({
       success: true,

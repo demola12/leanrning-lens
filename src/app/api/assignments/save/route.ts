@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { logActivity } from "@/lib/activities";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -83,6 +84,14 @@ export async function POST(req: NextRequest) {
     if (insertError) {
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
+
+    await logActivity({
+      teacher_id: teacher.id,
+      type: "assignment_published",
+      description: `Assignment "${title}" published`,
+      assignment_id: data.id,
+      metadata: { assignment_title: title, source: "manual" },
+    });
 
     return NextResponse.json({ id: data.id, filename: storagePath });
   } catch (err: any) {

@@ -54,6 +54,11 @@ export async function GET(req: NextRequest) {
       .in("status", ["submitted", "graded"])
       .order("submitted_at", { ascending: false })
       .limit(10),
+    supabaseAdmin.from("activities")
+      .select("*")
+      .eq("teacher_id", teacherId)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   const getCount = (r: PromiseSettledResult<any>, fallback = 0) =>
@@ -95,6 +100,19 @@ export async function GET(req: NextRequest) {
     timestamp: s.submitted_at || s.created_at || "",
   }));
 
+  const recentActivityData = getData(results[7]);
+  const activity = recentActivityData.length > 0
+    ? recentActivityData.map((a: any) => ({
+        id: a.id,
+        type: a.type,
+        description: a.description,
+        student_id: a.student_id,
+        assignment_id: a.assignment_id,
+        metadata: a.metadata,
+        timestamp: a.created_at,
+      }))
+    : submissions;
+
   return NextResponse.json({
     teacherName: teacher.full_name,
     stats: {
@@ -106,6 +124,6 @@ export async function GET(req: NextRequest) {
     },
     recentAssignments: recentAssignments || [],
     pendingReviews: pendingReviews || [],
-    activity: submissions,
+    activity,
   });
 }

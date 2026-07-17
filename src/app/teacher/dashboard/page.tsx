@@ -17,6 +17,10 @@ import {
   Loader2,
   Sparkles,
   PenLine,
+  UserCheck,
+  Upload,
+  RefreshCw,
+  Send,
 } from "lucide-react";
 
 interface DashboardData {
@@ -33,8 +37,10 @@ interface DashboardData {
   activity: {
     id: string;
     type: string;
-    student: { id: string; full_name: string };
-    assignment: { id: string; title: string };
+    description?: string;
+    student_id?: string;
+    assignment_id?: string;
+    metadata?: Record<string, any>;
     timestamp: string;
   }[];
 }
@@ -50,6 +56,88 @@ function timeAgo(date: string) {
   if (days < 7) return `${days}d ago`;
   return new Date(date).toLocaleDateString();
 }
+
+const activityIcon = (type: string) => {
+  switch (type) {
+    case "student_joined":
+      return <UserCheck className="w-4 h-4 text-blue-600" />;
+    case "student_submitted":
+      return <Upload className="w-4 h-4 text-violet-600" />;
+    case "student_resubmitted":
+      return <RefreshCw className="w-4 h-4 text-orange-600" />;
+    case "assignment_published":
+      return <Send className="w-4 h-4 text-emerald-600" />;
+    case "pdf_converted":
+      return <FileText className="w-4 h-4 text-indigo-600" />;
+    default:
+      return <Sparkles className="w-4 h-4 text-gray-400" />;
+  }
+};
+
+const activityColor = (type: string) => {
+  switch (type) {
+    case "student_joined":
+      return { bg: "bg-blue-50" };
+    case "student_submitted":
+      return { bg: "bg-violet-50" };
+    case "student_resubmitted":
+      return { bg: "bg-orange-50" };
+    case "assignment_published":
+      return { bg: "bg-emerald-50" };
+    case "pdf_converted":
+      return { bg: "bg-indigo-50" };
+    default:
+      return { bg: "bg-gray-50" };
+  }
+};
+
+const activityLabel = (type: string, entry: any) => {
+  const meta = entry.metadata || {};
+  const name = meta?.student_name || "A student";
+  const title = meta?.assignment_title || "an assignment";
+
+  switch (type) {
+    case "student_joined":
+      return (
+        <>
+          <span className="font-semibold text-gray-900">{meta?.student_name || "A student"}</span>
+          {" joined via invite"}
+        </>
+      );
+    case "student_submitted":
+      return (
+        <>
+          <span className="font-semibold text-gray-900">{name}</span>
+          {" submitted "}
+          <span className="font-medium text-gray-800">{title}</span>
+        </>
+      );
+    case "student_resubmitted":
+      return (
+        <>
+          <span className="font-semibold text-gray-900">{name}</span>
+          {" resubmitted "}
+          <span className="font-medium text-gray-800">{title}</span>
+        </>
+      );
+    case "assignment_published":
+      return (
+        <>
+          <span className="font-medium text-gray-800">{title}</span>
+          {" published"}
+        </>
+      );
+    case "pdf_converted":
+      return (
+        <>
+          PDF converted into questions for{" "}
+          <span className="font-medium text-gray-800">{meta?.assignment_title || "an assignment"}</span>
+        </>
+      );
+    default:
+      return <span>{entry.description || "Activity"}</span>;
+  }
+};
 
 const kpiCards = [
   { key: "students", label: "Students", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
@@ -281,19 +369,22 @@ export default function TeacherDashboardPage() {
               <p className="text-sm text-gray-400">No recent activity</p>
             </div>
           ) : (
-            data.activity.slice(0, 10).map((entry) => (
-              <div key={entry.id} className="flex items-center gap-3 px-5 py-3.5">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${
-                  entry.type === "submitted" ? "bg-blue-400" : "bg-emerald-400"
-                }`} />
-                <p className="text-sm text-gray-700 flex-1">
-                  <span className="font-semibold text-gray-900">{entry.student?.full_name || "A student"}</span>
-                  {" "}{entry.type === "submitted" ? "submitted" : "completed"}{" "}
-                  <span className="font-medium text-gray-800">{entry.assignment?.title || "an assignment"}</span>
-                </p>
-                <span className="text-xs text-gray-400 shrink-0">{timeAgo(entry.timestamp)}</span>
-              </div>
-            ))
+            data.activity.slice(0, 10).map((entry) => {
+              const icon = activityIcon(entry.type);
+              const color = activityColor(entry.type);
+              const label = activityLabel(entry.type, entry);
+              return (
+                <div key={entry.id} className="flex items-center gap-3 px-5 py-3.5">
+                  <div className={`w-8 h-8 rounded-full ${color.bg} flex items-center justify-center shrink-0`}>
+                    {icon}
+                  </div>
+                  <p className="text-sm text-gray-700 flex-1 min-w-0">
+                    {label}
+                  </p>
+                  <span className="text-xs text-gray-400 shrink-0">{timeAgo(entry.timestamp)}</span>
+                </div>
+              );
+            })
           )}
         </div>
       </div>

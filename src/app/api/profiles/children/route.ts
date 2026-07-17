@@ -13,16 +13,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing user_id" }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("*")
+    .select("id")
     .eq("user_id", userId)
     .is("parent_profile_id", null)
     .single();
 
-  if (error || !data) {
+  if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  return NextResponse.json(data);
+  const { data: children } = await supabaseAdmin
+    .from("profiles")
+    .select("id, full_name, ref_uuid, email, created_at")
+    .eq("parent_profile_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  return NextResponse.json({ children: children || [] });
 }

@@ -8,25 +8,30 @@ const supabaseAdmin = createClient(
 
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("user_id");
+  const profileId = req.nextUrl.searchParams.get("profile_id");
 
-  if (!userId) {
-    return NextResponse.json({ error: "Missing user_id" }, { status: 400 });
-  }
+  let studentId: string;
 
-  const { data: student } = await supabaseAdmin
-    .from("profiles")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
-
-  if (!student) {
-    return NextResponse.json({ error: "Student profile not found" }, { status: 404 });
+  if (profileId) {
+    studentId = profileId;
+  } else if (userId) {
+    const { data: student } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+    if (!student) {
+      return NextResponse.json({ error: "Student profile not found" }, { status: 404 });
+    }
+    studentId = student.id;
+  } else {
+    return NextResponse.json({ error: "Missing user_id or profile_id" }, { status: 400 });
   }
 
   const { data, error } = await supabaseAdmin
     .from("assigned_assignments")
     .select("*, assignment:assignment_id(*)")
-    .eq("student_id", student.id)
+    .eq("student_id", studentId)
     .order("created_at", { ascending: false });
 
   if (error) {

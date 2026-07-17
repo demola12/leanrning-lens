@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { logActivity } from "@/lib/activities";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -130,6 +131,17 @@ Rules:
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
+
+    await logActivity({
+      teacher_id: teacher.id,
+      type: "assignment_published",
+      description: `Assignment "${parsed.title || topic}" published`,
+      metadata: {
+        assignment_title: parsed.title || topic,
+        question_count: questionCount,
+        source: "ai_topic",
+      },
+    });
 
     return NextResponse.json({
       success: true,

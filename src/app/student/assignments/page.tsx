@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
+import { useProfiles } from "@/lib/ProfilesContext";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -44,17 +45,22 @@ const statusStyles: Record<string, { label: string; color: string; bg: string }>
 export default function StudentAssignmentsPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { activeProfile } = useProfiles();
   const [assignments, setAssignments] = useState<AssignedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   const fetchAssignments = useCallback(async () => {
-    if (!user) return;
-    const res = await fetch(`/api/student/assignments?user_id=${user.id}`);
+    if (!user || !activeProfile) {
+      setAssignments([]);
+      setLoading(false);
+      return;
+    }
+    const res = await fetch(`/api/student/assignments?profile_id=${activeProfile.id}`);
     const data = await res.json();
     if (data.assignments) setAssignments(data.assignments);
     setLoading(false);
-  }, [user]);
+  }, [user, activeProfile?.id]);
 
   useEffect(() => { fetchAssignments(); }, [fetchAssignments]);
 

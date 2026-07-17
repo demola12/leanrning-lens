@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
+import { useProfiles } from "@/lib/ProfilesContext";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -22,20 +23,21 @@ export default function ResultPage() {
   const searchParams = useSearchParams();
   const assignedId = searchParams.get("id");
   const { user } = useAuth();
+  const { activeProfile } = useProfiles();
 
   const [submission, setSubmission] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!assignedId || !user) return;
+    if (!assignedId || !user || !activeProfile) return;
     const load = async () => {
-      const res = await fetch(`/api/student/submission?user_id=${user.id}&assigned_id=${assignedId}`);
+      const res = await fetch(`/api/student/submission?profile_id=${activeProfile.id}&assigned_id=${assignedId}`);
       const data = await res.json();
       setSubmission(data);
       setLoading(false);
     };
     load();
-  }, [assignedId, user]);
+  }, [assignedId, user, activeProfile?.id]);
 
   if (loading) {
     return (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { useProfiles } from "@/lib/ProfilesContext";
 import {
   User,
   Mail,
@@ -23,6 +24,10 @@ import {
   Zap,
   Sparkles,
   Crown,
+  Users,
+  UserPlus,
+  Copy,
+  School,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSubscription } from "@/lib/useSubscription";
@@ -36,12 +41,13 @@ interface Profile {
   created_at: string;
 }
 
-const tabs = ["Profile", "Account", "Subscription", "Notifications", "Preferences"] as const;
+const tabs = ["Children", "Profile", "Account", "Subscription", "Notifications", "Preferences"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function SettingsPage() {
   const { user, role, signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("Profile");
+  const { children, activeProfile, loading: profilesLoading, addChild, refresh } = useProfiles();
+  const [activeTab, setActiveTab] = useState<Tab>("Children");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +68,9 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
 
   const [deleting, setDeleting] = useState(false);
+  const [showAddChild, setShowAddChild] = useState(false);
+  const [childName, setChildName] = useState("");
+  const [adding, setAdding] = useState(false);
   const { subscription, loading: subLoading, createCheckoutSession, openPortal, cancelSubscription, resumeSubscription } = useSubscription();
 
   useEffect(() => {
@@ -153,6 +162,15 @@ export default function SettingsPage() {
     window.location.href = "/";
   };
 
+  const handleAddChild = async () => {
+    if (!childName.trim()) return;
+    setAdding(true);
+    await addChild(childName.trim());
+    setChildName("");
+    setAdding(false);
+    setShowAddChild(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -181,6 +199,98 @@ export default function SettingsPage() {
           </button>
         ))}
       </div>
+
+      {activeTab === "Children" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-gray-800">My Children</h2>
+            <button
+              onClick={() => setShowAddChild(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-all"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Child
+            </button>
+          </div>
+
+          {showAddChild && (
+            <div className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center p-4" onClick={() => setShowAddChild(false)}>
+              <div className="bg-white rounded-lg border border-gray-100 shadow-md p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-base font-bold text-gray-900 mb-2">Add a child</h3>
+                <p className="text-sm text-gray-500 mb-4">Each child gets their own profile, joining code, and teachers.</p>
+                <input
+                  type="text"
+                  value={childName}
+                  onChange={(e) => setChildName(e.target.value)}
+                  placeholder="Child's full name"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-4"
+                  autoFocus
+                />
+                <div className="flex items-center gap-2 justify-end">
+                  <button onClick={() => setShowAddChild(false)} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800">Cancel</button>
+                  <button onClick={handleAddChild} disabled={adding || !childName.trim()} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark disabled:opacity-60">
+                    {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {profilesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            </div>
+          ) : children.length === 0 ? (
+            <div className="py-16 text-center border border-gray-100 rounded-lg">
+              <div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-7 h-7 text-gray-300" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">No children added yet</h3>
+              <p className="text-sm text-gray-400 max-w-sm mx-auto">
+                Add a child profile for each student. Each child gets their own joining code and teacher connections.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {children.map((child) => {
+                const isActive = activeProfile?.id === child.id;
+                return (
+                  <div key={child.id} className={`p-5 rounded-xl border shadow-sm ${
+                    isActive ? "border-primary bg-primary/5" : "border-gray-100 bg-white"
+                  }`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                        isActive ? "bg-primary" : "bg-gray-300"
+                      }`}>
+                        {child.full_name?.split(" ").map((n) => n[0]).join("") || "?"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{child.full_name}</p>
+                        <p className="text-xs text-gray-400 truncate">Added {new Date(child.created_at).toLocaleDateString()}</p>
+                      </div>
+                      {isActive && (
+                        <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Active</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100">
+                      <span className="text-xs text-gray-500 font-mono flex-1">{child.ref_uuid}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(child.ref_uuid)}
+                        className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
+                        title="Copy joining code"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">Share this code with their teacher to connect.</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === "Profile" && (
         <div className="space-y-8">

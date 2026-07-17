@@ -2,6 +2,7 @@
 
 import StudentSidebar from "@/components/StudentSidebar";
 import { useRequireRole } from "@/lib/useRequireRole";
+import { ProfilesProvider } from "@/lib/ProfilesContext";
 
 export default function StudentLayout({
   children,
@@ -22,8 +23,10 @@ export default function StudentLayout({
 
   return (
     <div className="flex min-h-screen">
-      <StudentSidebar />
-      <main className="flex-1 bg-gray-50/50">{children}</main>
+      <ProfilesProvider>
+        <StudentSidebar />
+        <main className="flex-1 bg-gray-50/50">{children}</main>
+      </ProfilesProvider>
     </div>
   );
 }

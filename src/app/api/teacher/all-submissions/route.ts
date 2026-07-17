@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     .from("assigned_assignments")
     .select("id, status, score, submitted_at, created_at, student:student_id(id, full_name, ref_uuid), assignment:assignment_id(id, title, question_count, total_points)")
     .eq("teacher_id", teacher.id)
-    .in("status", ["submitted", "graded"])
+    .in("status", ["submitted", "graded", "reviewed"])
     .order("submitted_at", { ascending: false });
 
   if (error) {

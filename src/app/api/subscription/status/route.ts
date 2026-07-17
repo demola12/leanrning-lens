@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     .from("profiles")
     .select("id")
     .eq("user_id", userId)
+    .is("parent_profile_id", null)
     .single();
 
   if (!profile) {
