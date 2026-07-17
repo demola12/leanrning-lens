@@ -90,12 +90,12 @@ export default function TeacherDashboardPage() {
     );
   }
 
-  if (!data || (data.stats.assignments === 0)) {
+  if (!data) {
     return (
       <div className="p-8 max-w-4xl">
         <div className="text-center py-24">
-          <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/5 flex items-center justify-center mx-auto mb-6">
-            <Sparkles className="w-10 h-10 text-primary/60" />
+          <div className="w-20 h-20 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center mx-auto mb-6">
+            <Sparkles className="w-10 h-10 text-gray-300" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to LearnLens</h1>
           <p className="text-gray-500 mb-8 max-w-md mx-auto">
@@ -103,7 +103,7 @@ export default function TeacherDashboardPage() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <button
-              onClick={() => router.push("/teacher/assignments/create")}
+              onClick={() => router.push("/teacher/assignments")}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold text-sm rounded-lg hover:bg-primary-dark transition-all shadow-sm shadow-primary/25"
             >
               <FileUp className="w-4 h-4" />
@@ -121,6 +121,8 @@ export default function TeacherDashboardPage() {
       </div>
     );
   }
+
+  const { stats } = data;
 
   return (
     <div className="p-8 max-w-6xl">
@@ -166,7 +168,7 @@ export default function TeacherDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         {kpiCards.map((card) => {
           const Icon = card.icon;
-          const value = data.stats[card.key as keyof typeof data.stats];
+          const value = stats[card.key as keyof typeof stats];
           return (
             <div key={card.key} className="p-5 rounded-xl bg-white border border-gray-100 shadow-sm">
               <div className="flex items-center justify-between mb-3">

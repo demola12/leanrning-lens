@@ -171,21 +171,6 @@ export default function ManualBuilderPage() {
 
   const editingQuestion = editingQuestionId ? questions.find((q) => q.id === editingQuestionId) : null;
 
-  function renderMath(text: string) {
-    if (!text) return text;
-    const cleaned = text.replace(/\\placeholder\{[^}]*\}/g, "");
-    const parts = cleaned.split(/(\$\$.+?\$\$|\$.+?\$)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("$$") && part.endsWith("$$")) {
-        return <Katex key={i} math={part.slice(2, -2)} block />;
-      }
-      if (part.startsWith("$") && part.endsWith("$")) {
-        return <Katex key={i} math={part.slice(1, -1)} />;
-      }
-      return <span key={i} className="break-words">{part}</span>;
-    });
-  }
-
   function Katex({ math, block }: { math: string; block?: boolean }) {
     const ref = useRef<HTMLSpanElement>(null);
     useEffect(() => {
@@ -199,6 +184,21 @@ export default function ManualBuilderPage() {
       });
     }, [math, block]);
     return <span ref={ref} className={block ? "block text-center py-2 overflow-x-auto" : "inline"} />;
+  }
+
+  function renderHtml(html: string) {
+    if (!html || !html.includes("inlineMath")) {
+      return <span className="break-words" dangerouslySetInnerHTML={{ __html: html }} />;
+    }
+    const parts = html.split(/(<inline-math[^>]*><\/inline-math>)/g);
+    return parts.map((part, i) => {
+      const match = part.match(/data-latex="([^"]*)"/);
+      if (match) {
+        return <Katex key={i} math={match[1]} />;
+      }
+      if (part.startsWith("<inline-math")) return null;
+      return <span key={i} className="break-words" dangerouslySetInnerHTML={{ __html: part }} />;
+    });
   }
 
   return (
@@ -372,7 +372,7 @@ export default function ManualBuilderPage() {
                       <div className="flex-1 min-w-0">
                         <span className="text-xs font-semibold text-gray-400 uppercase">{q.type.replace("_", " ")}</span>
                         <h3 className="text-base font-semibold text-gray-900 mt-0.5 break-words overflow-x-hidden">
-                          {i + 1}. {renderMath(q.title || "Untitled question")}
+                          {i + 1}. {renderHtml(q.title || "Untitled question")}
                         </h3>
                         {q.image_url && (
                           <img src={q.image_url} alt="" className="mt-3 max-h-40 rounded-lg border border-gray-100 object-contain" />
