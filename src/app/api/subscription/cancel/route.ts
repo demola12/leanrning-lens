@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .select("id")
       .eq("user_id", user_id)
+      .is("parent_profile_id", null)
       .single();
 
     if (!profile) {

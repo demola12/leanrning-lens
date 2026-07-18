@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .select("id")
       .eq("user_id", user_id)
+      .is("parent_profile_id", null)
       .single();
 
     if (!profile) {
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, plan, status: sub.status });
   } catch (err: any) {
+    console.error("sync-session error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -31,6 +31,8 @@ export function useSubscription() {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     if (!sessionId) return;
+    // Onboarding page handles its own sync
+    if (window.location.pathname === "/student/onboarding") return;
 
     let attempts = 0;
     const doSync = () => {

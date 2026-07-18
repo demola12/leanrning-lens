@@ -23,6 +23,8 @@ import {
   Zap,
   Sparkles,
   Crown,
+  Star,
+  Users,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSubscription } from "@/lib/useSubscription";
@@ -394,18 +396,20 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between p-5 rounded-lg border border-gray-200 bg-white">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    subscription?.plan === "premium" ? "bg-amber-50" : subscription?.plan === "pro" ? "bg-primary/5" : "bg-gray-100"
+                    subscription?.plan === "unlimited" ? "bg-amber-50" : subscription?.plan === "family" ? "bg-primary/5" : subscription?.plan === "solo" ? "bg-blue-50" : "bg-gray-100"
                   }`}>
-                    {subscription?.plan === "premium" ? <Crown className="w-5 h-5 text-amber-500" /> :
-                     subscription?.plan === "pro" ? <Sparkles className="w-5 h-5 text-primary" /> :
+                    {subscription?.plan === "unlimited" ? <Crown className="w-5 h-5 text-amber-500" /> :
+                     subscription?.plan === "family" ? <Users className="w-5 h-5 text-primary" /> :
+                     subscription?.plan === "solo" ? <Star className="w-5 h-5 text-blue-500" /> :
                      <Zap className="w-5 h-5 text-gray-500" />}
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "Free"} Plan</div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {subscription?.plan === "free" ? "Basic access with limited features" :
-                       subscription?.plan === "pro" ? "Full access for educators and tutors" :
-                       "Everything for schools and institutions"}
+                      {subscription?.plan === "free" ? "Basic access" :
+                       subscription?.plan === "solo" ? "For one student" :
+                       subscription?.plan === "family" ? "For up to 3 students" :
+                       "Unlimited students"}
                       {subscription?.current_period_end && ` · Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`}
                     </p>
                   </div>
@@ -420,9 +424,10 @@ export default function SettingsPage() {
               {/* Plan Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { id: "free", name: "Free", price: "$0", period: "forever", desc: "Get started with basic features", icon: Zap, color: "text-gray-500", border: "border-gray-200", features: ["Create up to 5 assignments", "Basic analytics", "10 submissions/month", "PDF upload"] },
-                  { id: "pro", name: "Pro", price: "$12", period: "/month", desc: "For serious educators and tutors", icon: Sparkles, color: "text-primary", border: "border-primary", features: ["Unlimited assignments", "AI-powered grading", "Study plan generator", "Progress tracking", "Priority support"], popular: true },
-                  { id: "premium", name: "Premium", price: "$29", period: "/month", desc: "For schools and institutions", icon: Crown, color: "text-amber-500", border: "border-amber-200", features: ["Everything in Pro", "Unlimited students", "Admin dashboard", "LMS integration", "Dedicated support", "Custom branding"] },
+                  { id: "free", name: "Free", price: "£0", period: "", desc: "Get started", icon: Zap, color: "text-gray-500", border: "border-gray-200", features: ["1 student profile", "Limited submissions"] },
+                  { id: "solo", name: "Solo ⭐", price: "£5.99", period: "/month", desc: "For one student", icon: Star, color: "text-blue-500", border: "border-blue-200", features: ["1 student profile", "Unlimited assignments", "AI-powered grading", "Progress tracking", "Multi-teacher support", "PDF export"] },
+                  { id: "family", name: "Family", price: "£10.99", period: "/month", desc: "Up to 3 students", icon: Users, color: "text-primary", border: "border-primary", features: ["Up to 3 student profiles", "Unlimited assignments", "AI-powered grading", "Parent dashboard", "Family management", "Priority support"], popular: true },
+                  { id: "unlimited", name: "Unlimited", price: "£20.99", period: "/month", desc: "Unlimited students", icon: Crown, color: "text-amber-500", border: "border-amber-200", features: ["Unlimited student profiles", "Everything in Family", "Priority support"] },
                 ].map((plan: any) => {
                   const Icon = plan.icon;
                   const isCurrent = subscription?.plan === plan.id;

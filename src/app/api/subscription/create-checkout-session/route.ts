@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     const { user_id, plan, role } = await req.json();
 
-    if (!user_id || !plan || !["pro", "premium"].includes(plan)) {
+    if (!user_id || !plan || !["solo", "family", "unlimited"].includes(plan)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .select("id, email, full_name, role")
       .eq("user_id", user_id)
+      .is("parent_profile_id", null)
       .single();
 
     if (!profile) {
@@ -49,12 +50,13 @@ export async function POST(req: NextRequest) {
 
     const planConfig = PLANS[plan as keyof typeof PLANS];
 
+    const successPath = rolePath === "/teacher/settings" ? rolePath : "/student/onboarding";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: planConfig.priceId!, quantity: 1 }],
-      success_url: `${baseUrl}${rolePath}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}${rolePath}`,
+      success_url: `${baseUrl}${successPath}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}${successPath}`,
       metadata: { profile_id: profile.id, plan },
     });
 

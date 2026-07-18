@@ -28,6 +28,7 @@ import {
   UserPlus,
   Copy,
   School,
+  Star,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSubscription } from "@/lib/useSubscription";
@@ -468,16 +469,20 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between p-5 rounded-lg border border-gray-200 bg-white">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    subscription?.plan === "premium" ? "bg-amber-50" : subscription?.plan === "pro" ? "bg-primary/5" : "bg-gray-100"
+                    subscription?.plan === "unlimited" ? "bg-amber-50" : subscription?.plan === "family" ? "bg-primary/5" : subscription?.plan === "solo" ? "bg-blue-50" : "bg-gray-100"
                   }`}>
-                    {subscription?.plan === "premium" ? <Crown className="w-5 h-5 text-amber-500" /> :
-                     subscription?.plan === "pro" ? <Sparkles className="w-5 h-5 text-primary" /> :
+                    {subscription?.plan === "unlimited" ? <Crown className="w-5 h-5 text-amber-500" /> :
+                     subscription?.plan === "family" ? <Users className="w-5 h-5 text-primary" /> :
+                     subscription?.plan === "solo" ? <Star className="w-5 h-5 text-blue-500" /> :
                      <Zap className="w-5 h-5 text-gray-500" />}
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "Free"} Plan</div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {subscription?.plan === "free" ? "Basic access" : subscription?.plan === "pro" ? "Full access" : "School-wide access"}
+                      {subscription?.plan === "free" ? "Basic access" :
+                       subscription?.plan === "solo" ? "For one child" :
+                       subscription?.plan === "family" ? "For up to 3 children" :
+                       "Unlimited children"}
                       {subscription?.current_period_end && ` · Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`}
                     </p>
                   </div>
@@ -489,9 +494,9 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { id: "free", name: "Free", price: "$0", period: "forever", desc: "Get started", icon: Zap, color: "text-gray-500", features: ["Basic access", "Limited submissions"] },
-                  { id: "pro", name: "Pro", price: "$12", period: "/month", desc: "Full access", icon: Sparkles, color: "text-primary", features: ["Unlimited everything", "AI analysis", "Priority support"], popular: true },
-                  { id: "premium", name: "Premium", price: "$29", period: "/month", desc: "School-wide", icon: Crown, color: "text-amber-500", features: ["Everything in Pro", "Admin dashboard", "LMS integration"], popular: false },
+                  { id: "solo", name: "Solo ⭐", price: "£5.99", period: "/month", desc: "For one child", icon: Star, color: "text-blue-500", features: ["1 student profile", "Unlimited assignments", "AI feedback", "Progress reports", "Multi-teacher support", "PDF report export"] },
+                  { id: "family", name: "Family", price: "£10.99", period: "/month", desc: "Up to 3 children", icon: Users, color: "text-primary", features: ["Up to 3 student profiles", "Unlimited assignments", "AI feedback", "Parent dashboard", "Family management", "Priority support"], popular: true },
+                  { id: "unlimited", name: "Unlimited", price: "£20.99", period: "/month", desc: "Unlimited children", icon: Crown, color: "text-amber-500", features: ["Unlimited student profiles", "Everything in Family", "Priority support"] },
                 ].map((plan: any) => {
                   const Icon = plan.icon;
                   const isCurrent = subscription?.plan === plan.id;
@@ -507,9 +512,9 @@ export default function SettingsPage() {
                           <li key={f} className="flex items-center gap-2 text-xs text-gray-600"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />{f}</li>
                         ))}
                       </ul>
-                      <button disabled={isCurrent} onClick={() => plan.id !== "free" && createCheckoutSession(plan.id)}
+                      <button disabled={isCurrent} onClick={() => createCheckoutSession(plan.id)}
                         className={`mt-6 w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${isCurrent ? "bg-primary/10 text-primary cursor-default" : plan.popular ? "bg-primary text-white hover:bg-primary-dark" : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"}`}>
-                        {isCurrent ? "Current Plan" : plan.id === "free" ? "Free" : "Upgrade"}
+                        {isCurrent ? "Current Plan" : "Upgrade"}
                       </button>
                     </div>
                   );

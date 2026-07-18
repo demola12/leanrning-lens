@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function DashboardRouter() {
   const { user, loading, role } = useAuth();
   const router = useRouter();
+  const [subChecked, setSubChecked] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -14,8 +15,20 @@ export default function DashboardRouter() {
       router.push("/auth/login");
       return;
     }
-    if (role === "student") router.push("/student");
-    else if (role === "teacher") router.push("/teacher");
+    if (role === "student") {
+      fetch(`/api/subscription/status?user_id=${user.id}`)
+        .then((r) => r.json())
+        .then((sub) => {
+          if (!sub || sub.plan === "free") {
+            router.push("/student/onboarding");
+          } else {
+            router.push("/student");
+          }
+        })
+        .catch(() => router.push("/student"));
+      return;
+    }
+    if (role === "teacher") router.push("/teacher");
     else if (role === "organization") router.push("/organization");
     else router.push("/");
   }, [user, loading, role, router]);
