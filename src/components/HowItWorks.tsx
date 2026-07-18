@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Upload, Link2, Monitor, BarChart3 } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
 
+
 const steps = [
   { number: "01", title: "Upload", description: "Teacher uploads a PDF or creates an assignment manually in seconds.", icon: Upload },
   { number: "02", title: "Assign", description: "Generate a shareable link and send it to your students instantly.", icon: Link2 },
