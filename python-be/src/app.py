@@ -7,6 +7,9 @@ import tempfile
 app = Flask(__name__)
 
 
+client = ollama.Client(
+    host="http://host.docker.internal:11434"
+)
 def encode_image(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
@@ -16,7 +19,7 @@ def analyze_image(image_path):
 
     image_base64 = encode_image(image_path)
 
-    response = ollama.chat(
+    response = client.chat(
         model="qwen2.5vl:3b",
         messages=[
             {
