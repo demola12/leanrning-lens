@@ -16,11 +16,13 @@ import {
   UserPlus,
   Check,
   Loader2,
+  Library,
 } from "lucide-react";
 
 const menuItems = [
   { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
   { label: "Assignments", href: "/student/assignments", icon: FileText },
+  { label: "Library", href: "/student/library", icon: Library },
   { label: "Reports", href: "/student/progress", icon: BarChart3 },
   { label: "Settings", href: "/student/settings", icon: Settings },
 ];
