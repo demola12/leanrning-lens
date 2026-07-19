@@ -62,7 +62,7 @@ export default function OnboardingPage() {
     if (subLoading) return;
     if (syncing) return;
     if (hasSessionId) return;
-    if (subscription && subscription.plan !== "free") {
+    if (subscription && subscription.plan) {
       router.replace("/student");
     }
   }, [subLoading, subscription, router, syncing, hasSessionId]);
@@ -74,9 +74,10 @@ export default function OnboardingPage() {
       fetch(`/api/subscription/status?user_id=${user?.id}`)
         .then((r) => r.json())
         .then((sub) => {
-          if (sub && sub.plan !== "free") {
+          if (sub && sub.plan) {
             window.history.replaceState({}, "", "/student/onboarding");
             router.replace("/student");
+            setTimeout(() => window.location.reload(), 100);
           } else {
             setTimeout(check, 1500);
           }

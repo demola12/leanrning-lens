@@ -404,9 +404,9 @@ export default function SettingsPage() {
                      <Zap className="w-5 h-5 text-gray-500" />}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "Free"} Plan</div>
+                    <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "No"} Plan</div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {subscription?.plan === "free" ? "Basic access" :
+                      {!subscription?.plan ? "No active plan" :
                        subscription?.plan === "solo" ? "For one student" :
                        subscription?.plan === "family" ? "For up to 3 students" :
                        "Unlimited students"}
@@ -424,7 +424,6 @@ export default function SettingsPage() {
               {/* Plan Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { id: "free", name: "Free", price: "£0", period: "", desc: "Get started", icon: Zap, color: "text-gray-500", border: "border-gray-200", features: ["1 student profile", "Limited submissions"] },
                   { id: "solo", name: "Solo ⭐", price: "£5.99", period: "/month", desc: "For one student", icon: Star, color: "text-blue-500", border: "border-blue-200", features: ["1 student profile", "Unlimited assignments", "AI-powered grading", "Progress tracking", "Multi-teacher support", "PDF export"] },
                   { id: "family", name: "Family", price: "£10.99", period: "/month", desc: "Up to 3 students", icon: Users, color: "text-primary", border: "border-primary", features: ["Up to 3 student profiles", "Unlimited assignments", "AI-powered grading", "Parent dashboard", "Family management", "Priority support"], popular: true },
                   { id: "unlimited", name: "Unlimited", price: "£20.99", period: "/month", desc: "Unlimited students", icon: Crown, color: "text-amber-500", border: "border-amber-200", features: ["Unlimited student profiles", "Everything in Family", "Priority support"] },
@@ -450,14 +449,14 @@ export default function SettingsPage() {
                       </ul>
                       <button
                         disabled={isCurrent}
-                        onClick={() => plan.id !== "free" && createCheckoutSession(plan.id)}
+                        onClick={() => createCheckoutSession(plan.id)}
                         className={`mt-6 w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${
                           isCurrent ? "bg-primary/10 text-primary cursor-default" :
                           plan.popular ? "bg-primary text-white hover:bg-primary-dark" :
                           "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"
                         }`}
                       >
-                        {isCurrent ? "Current Plan" : plan.id === "free" ? "Free" : "Upgrade"}
+                        {isCurrent ? "Current Plan" : "Upgrade"}
                       </button>
                     </div>
                   );

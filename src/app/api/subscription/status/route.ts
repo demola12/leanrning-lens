@@ -30,5 +30,5 @@ export async function GET(req: NextRequest) {
     .eq("profile_id", profile.id)
     .maybeSingle();
 
-  return NextResponse.json(subscription || { plan: "free", status: "active", current_period_end: null, stripe_customer_id: null });
+  return NextResponse.json(subscription || { plan: null, status: "none", current_period_end: null, stripe_customer_id: null });
 }

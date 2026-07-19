@@ -27,7 +27,7 @@ export default function StudentLayout({
     fetch(`/api/subscription/status?user_id=${user.id}`)
       .then((r) => r.json())
       .then((sub) => {
-        if (!sub || sub.plan === "free") {
+        if (!sub || !sub.plan) {
           router.replace("/student/onboarding");
         } else {
           setGatePassed(true);

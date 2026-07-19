@@ -43,15 +43,20 @@ export default function StudentSidebar() {
   const [addChildOpen, setAddChildOpen] = useState(false);
   const [childName, setChildName] = useState("");
   const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState("");
 
   const handleAddChild = async () => {
     if (!childName.trim()) return;
     setAdding(true);
-    await addChild(childName.trim());
-    setChildName("");
+    setAddError("");
+    try {
+      await addChild(childName.trim());
+      setChildName("");
+      setAddChildOpen(false);
+    } catch (e: any) {
+      setAddError(e.message);
+    }
     setAdding(false);
-    setAddChildOpen(false);
-    refresh();
   };
 
   const handleSwitchProfile = (id: string) => {
@@ -135,6 +140,9 @@ export default function StudentSidebar() {
           <div className="bg-white rounded-lg border border-gray-100 shadow-md p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-gray-900 mb-4">Add a child</h3>
             <p className="text-sm text-gray-500 mb-4">Each child gets their own profile, joining code, and teachers.</p>
+            {addError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm mb-4">{addError}</div>
+            )}
             <input
               type="text"
               value={childName}

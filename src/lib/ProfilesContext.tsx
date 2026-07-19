@@ -75,13 +75,18 @@ export function ProfilesProvider({ children }: { children: ReactNode }) {
   const activeProfile = childrenList.find((c) => c.id === activeProfileId) || null;
 
   const addChild = async (fullName: string) => {
-    if (!user) return;
-    await fetch("/api/profiles/add-child", {
+    if (!user) return null;
+    const res = await fetch("/api/profiles/add-child", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: user.id, full_name: fullName }),
     });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to add child");
+    }
     await fetchChildren();
+    return data;
   };
 
   return (

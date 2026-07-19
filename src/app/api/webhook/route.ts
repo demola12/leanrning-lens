@@ -33,16 +33,27 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    console.log("Webhook received type:", event.type);
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
+        console.log("checkout.session.completed:", { profile_id: session.metadata?.profile_id, plan: session.metadata?.plan, customer: session.customer, subscription: session.subscription });
         const profileId = session.metadata?.profile_id;
-        const plan = session.metadata?.plan || "pro";
+        const plan = session.metadata?.plan || "solo";
 
-        if (!profileId) break;
+        if (!profileId) {
+          console.log("Missing profile_id in session metadata");
+          break;
+        }
 
         const subscriptionId = session.subscription as string;
+        if (!subscriptionId) {
+          console.log("No subscription in session");
+          break;
+        }
+
         const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
+        console.log("Subscription retrieved:", { status: sub.status, plan });
 
         await supabaseAdmin.from("subscriptions").upsert({
           profile_id: profileId,
@@ -53,6 +64,7 @@ export async function POST(req: NextRequest) {
           current_period_start: toISO(sub.current_period_start),
           current_period_end: toISO(sub.current_period_end),
         });
+        console.log("Subscription upserted for profile:", profileId);
         break;
       }
 
@@ -60,6 +72,7 @@ export async function POST(req: NextRequest) {
       case "invoice.payment_succeeded": {
         const invoice = event.data.object;
         const subscriptionId = invoice.subscription as string;
+        console.log("invoice event:", { type: event.type, subscriptionId });
         if (!subscriptionId) break;
 
         const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
@@ -77,6 +90,7 @@ export async function POST(req: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub: any = event.data.object;
+        console.log("subscription event:", { type: event.type, id: sub.id, status: sub.status });
         await supabaseAdmin
           .from("subscriptions")
           .update({
@@ -87,10 +101,14 @@ export async function POST(req: NextRequest) {
           .eq("stripe_subscription_id", sub.id);
         break;
       }
+
+      default:
+        console.log("Unhandled webhook event type:", event.type);
     }
 
     return NextResponse.json({ received: true });
   } catch (err: any) {
+    console.error("Webhook handler error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -19,7 +19,7 @@ export default function DashboardRouter() {
       fetch(`/api/subscription/status?user_id=${user.id}`)
         .then((r) => r.json())
         .then((sub) => {
-          if (!sub || sub.plan === "free") {
+          if (!sub || !sub.plan) {
             router.push("/student/onboarding");
           } else {
             router.push("/student");

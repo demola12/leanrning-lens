@@ -6,6 +6,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const PLAN_LIMITS: Record<string, number> = {
+  solo: 1,
+  family: 3,
+  unlimited: Infinity,
+};
+
 function generateRefUuid(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -30,6 +36,27 @@ export async function POST(req: NextRequest) {
 
     if (!parent) {
       return NextResponse.json({ error: "Parent profile not found" }, { status: 404 });
+    }
+
+    // Check plan limits
+    const { data: subscription } = await supabaseAdmin
+      .from("subscriptions")
+      .select("plan")
+      .eq("profile_id", parent.id)
+      .maybeSingle();
+
+    const plan = subscription?.plan as string || "solo";
+    const limit = PLAN_LIMITS[plan] || 1;
+
+    const { count } = await supabaseAdmin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("parent_profile_id", parent.id);
+
+    if (count !== null && count >= limit) {
+      return NextResponse.json({
+        error: `Your ${plan} plan allows up to ${limit === Infinity ? 'unlimited' : limit} student profile${limit !== 1 ? 's' : ''}. Upgrade to add more.`,
+      }, { status: 403 });
     }
 
     let ref_uuid = generateRefUuid();

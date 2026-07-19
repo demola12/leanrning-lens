@@ -50,11 +50,20 @@ export async function POST(req: NextRequest) {
 
     const planConfig = PLANS[plan as keyof typeof PLANS];
 
+    // Set trial until end of month so first charge is at month-end
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+    const trialEnd = Math.floor(endOfMonth.getTime() / 1000);
+
     const successPath = rolePath === "/teacher/settings" ? rolePath : "/student/onboarding";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: planConfig.priceId!, quantity: 1 }],
+      allow_promotion_codes: true,
+      subscription_data: {
+        trial_end: trialEnd,
+      },
       success_url: `${baseUrl}${successPath}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}${successPath}`,
       metadata: { profile_id: profile.id, plan },

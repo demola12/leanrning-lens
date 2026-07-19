@@ -477,9 +477,9 @@ export default function SettingsPage() {
                      <Zap className="w-5 h-5 text-gray-500" />}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "Free"} Plan</div>
+                    <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "No"} Plan</div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {subscription?.plan === "free" ? "Basic access" :
+                      {!subscription?.plan ? "No active plan" :
                        subscription?.plan === "solo" ? "For one child" :
                        subscription?.plan === "family" ? "For up to 3 children" :
                        "Unlimited children"}
@@ -533,7 +533,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {subscription?.plan !== "free" && subscription?.stripe_customer_id && (
+                    {subscription?.plan && subscription?.stripe_customer_id && (
                       <>
                         {subscription?.status === "active" && (
                           <button onClick={cancelSubscription} className="px-4 py-2 rounded-lg bg-white border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50 transition-all">Cancel Plan</button>

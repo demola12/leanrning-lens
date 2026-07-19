@@ -6,9 +6,9 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export const PLANS = {
   free: { id: "free", name: "Free", price: 0, priceId: null },
-  solo: { id: "solo", name: "Solo ⭐", price: 599, priceId: "price_1TslBfAdFX1Dzs395NyUa8BT" },
-  family: { id: "family", name: "Family", price: 1099, priceId: "price_1TslBwAdFX1Dzs39tlKRZ12e" },
-  unlimited: { id: "unlimited", name: "Unlimited", price: 2099, priceId: "price_1TslBwAdFX1Dzs39tlKRZ12e" },
+  solo: { id: "solo", name: "Solo ⭐", price: 599, priceId: "price_1Tuo5oAdFX1Dzs39A2MRHn5G" },
+  family: { id: "family", name: "Family", price: 1099, priceId: "price_1Tuo5oAdFX1Dzs39OwlKQHLN" },
+  unlimited: { id: "unlimited", name: "Unlimited", price: 2099, priceId: "price_1Tuo5pAdFX1Dzs390LhTdD46" },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
