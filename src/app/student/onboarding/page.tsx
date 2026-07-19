@@ -68,23 +68,35 @@ export default function OnboardingPage() {
   }, [subLoading, subscription, router, syncing, hasSessionId]);
 
   useEffect(() => {
-    if (!hasSessionId) return;
+    if (!hasSessionId || !user) return;
     setSyncing(true);
-    const check = () => {
-      fetch(`/api/subscription/status?user_id=${user?.id}`)
+    const sessionId = new URLSearchParams(window.location.search).get("session_id");
+    let attempts = 0;
+    const sync = () => {
+      fetch("/api/subscription/sync-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, session_id: sessionId }),
+      })
         .then((r) => r.json())
-        .then((sub) => {
-          if (sub && sub.plan) {
+        .then((data) => {
+          if (data.success) {
             window.history.replaceState({}, "", "/student/onboarding");
             router.replace("/student");
             setTimeout(() => window.location.reload(), 100);
-          } else {
-            setTimeout(check, 1500);
+          } else if (attempts < 15) {
+            attempts++;
+            setTimeout(sync, 2000);
           }
         })
-        .catch(() => setTimeout(check, 1500));
+        .catch(() => {
+          if (attempts < 15) {
+            attempts++;
+            setTimeout(sync, 2000);
+          }
+        });
     };
-    setTimeout(check, 2000);
+    setTimeout(sync, 1000);
   }, [hasSessionId, user, router]);
 
   const handleSubscribe = async () => {

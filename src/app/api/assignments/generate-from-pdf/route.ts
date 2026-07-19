@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/activities";
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -8,46 +9,25 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File;
-    const userId = formData.get("user_id") as string;
-    const title = formData.get("title") as string;
-    const subject = formData.get("subject") as string;
-    const description = formData.get("description") as string;
-    const questionCountParam = formData.get("question_count") as string;
-    const maxQuestions = questionCountParam ? Math.min(Math.max(parseInt(questionCountParam) || 10, 1), 50) : 10;
+    const { user_id, title, subject, question_count, page_images, file_name } = await req.json();
 
-    if (!file || !userId) {
-      return NextResponse.json({ error: "Missing file or user_id" }, { status: 400 });
+    if (!user_id || !page_images || !Array.isArray(page_images) || page_images.length === 0) {
+      return NextResponse.json({ error: "Missing required fields or page images" }, { status: 400 });
     }
 
     const { data: teacher } = await supabaseAdmin
       .from("profiles")
       .select("id")
-      .eq("user_id", userId)
+      .eq("user_id", user_id)
       .single();
 
     if (!teacher) {
       return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const maxQuestions = Math.min(Math.max(question_count || 10, 1), 50);
 
-    const mod = await import("pdf-parse/lib/pdf-parse.js");
-    const pdfParse = typeof mod === "function" ? mod : mod.default;
-    const pdfData = await pdfParse(buffer);
-    const pdfText = pdfData.text;
-
-    if (!pdfText || pdfText.trim().length < 10) {
-      return NextResponse.json({ error: "Could not extract enough text from PDF" }, { status: 400 });
-    }
-
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "LLM API key not configured" }, { status: 500 });
-    }
-
-    const systemPrompt = `You are an expert educational assessment creator. Generate questions based on the provided lecture content.
+    const systemPrompt = `You are an expert educational assessment creator. Generate questions based on the provided document images.
 
 Return ONLY valid JSON with no markdown formatting or code fences. The response must be a JSON object with this exact structure:
 {
@@ -55,7 +35,7 @@ Return ONLY valid JSON with no markdown formatting or code fences. The response 
   "questions": [
     {
       "id": "unique-string-id",
-      "type": "multiple_choice | true_false | short_answer",
+      "type": "multiple_choice | true_false | short_answer | fill_blank",
       "title": "question text",
       "points": 1,
       "options": ["option A", "option B", ...],
@@ -65,35 +45,39 @@ Return ONLY valid JSON with no markdown formatting or code fences. The response 
 }
 
 Rules:
-- Generate up to ${maxQuestions} questions covering key concepts from the content
-- Prioritize multiple_choice and true_false questions; use short_answer sparingly
+- Generate up to ${maxQuestions} questions covering key concepts from the document
+- Prioritize multiple_choice and true_false questions; use short_answer and fill_blank sparingly
 - Each question should test understanding, not just recall
 - Points should be 1 for basic, 2 for harder questions
 - For multiple_choice, provide 4 options
 - For true_false, options are ["True", "False"]`;
 
-    const userPrompt = `Generate educational assessment questions from this content:\n\n${pdfText.slice(0, 30000)}`;
+    const apiUrl = process.env.QWEN_API_URL || "https://ws-njwq63exbhwz01in.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/chat/completions";
+    const apiKey = process.env.QWEN_API_KEY || "sk-ws-H.XILLMX.BVSo.MEYCIQC4pRuePMlA6LBsLySrpiDJpEzeERQYPdF0M_YcsS6hzQIhAI2p2nHLW0l7N6IY7duT10Fr10LmB3h7jOo6zMQzrApU";
 
-    const llmRes = await fetch("https://api.deepseek.com/chat/completions", {
+    const messages: any[] = [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: `Generate educational assessment questions from this document. The document has ${page_images.length} page(s). Extract all text and figures from the images and create questions. Generate up to ${maxQuestions} questions.` },
+          ...page_images.map((img: string) => ({ type: "image_url", image_url: { url: img } })),
+        ],
+      },
+    ];
+
+    const llmRes = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
+      body: JSON.stringify({ model: "qwen-vl-max", messages, temperature: 0.3, max_tokens: 4096 }),
     });
 
     if (!llmRes.ok) {
       const errText = await llmRes.text();
-      return NextResponse.json({ error: `LLM API error: ${errText}` }, { status: 502 });
+      return NextResponse.json({ error: `LLM API error (${llmRes.status}): ${errText}` }, { status: 502 });
     }
 
     const llmData = await llmRes.json();
@@ -106,11 +90,8 @@ Rules:
     const cleaned = content.replace(/```(?:json)?\s*/gi, "").replace(/\s*```/g, "").trim();
 
     let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      return NextResponse.json({ error: "Failed to parse LLM response as JSON" }, { status: 502 });
-    }
+    try { parsed = JSON.parse(cleaned); }
+    catch { return NextResponse.json({ error: "Failed to parse LLM response as JSON" }, { status: 502 }); }
 
     const questions = parsed.questions || [];
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -122,14 +103,11 @@ Rules:
     const totalPoints = trimmedQuestions.reduce((sum: number, q: any) => sum + (q.points || 1), 0);
 
     const uuid = crypto.randomUUID();
-    const filename = `${userId}/${uuid}.json`;
+    const filename = `${user_id}/${uuid}.json`;
 
     const uploadResult = await supabaseAdmin.storage
       .from("assignments")
-      .upload(filename, JSON.stringify(trimmedQuestions), {
-        contentType: "application/json",
-        upsert: false,
-      });
+      .upload(filename, JSON.stringify(trimmedQuestions), { contentType: "application/json", upsert: false });
 
     if (uploadResult.error) {
       return NextResponse.json({ error: "Failed to save questions" }, { status: 500 });
@@ -139,7 +117,7 @@ Rules:
       teacher_id: teacher.id,
       filename,
       title: parsed.title || title || "AI Generated Assignment",
-      description: description || `Auto-generated from ${file.name}`,
+      description: `Auto-generated from ${file_name || "document"}`,
       subject: subject || "General",
       question_count: questionCount,
       total_points: totalPoints,
@@ -154,20 +132,12 @@ Rules:
       teacher_id: teacher.id,
       type: "pdf_converted",
       description: `PDF successfully converted into questions for "${parsed.title || title || "untitled"}"`,
-      metadata: {
-        assignment_title: parsed.title || title,
-        question_count: questionCount,
-        source: "pdf",
-      },
+      metadata: { assignment_title: parsed.title || title, question_count: questionCount, source: "pdf" },
     });
 
     return NextResponse.json({
       success: true,
-      assignment: {
-        title: parsed.title || title,
-        question_count: questionCount,
-        total_points: totalPoints,
-      },
+      assignment: { title: parsed.title || title, question_count: questionCount, total_points: totalPoints },
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

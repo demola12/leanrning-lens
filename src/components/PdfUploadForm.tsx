@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useAuth } from "@/lib/AuthContext";
 import { FileUp, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface PdfUploadFormProps {
@@ -17,6 +18,31 @@ export default function PdfUploadForm({ userId, onSuccess }: PdfUploadFormProps)
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ title: string; question_count: number; total_points: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const renderPdfToImages = async (file: File): Promise<string[]> => {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+    const buffer = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+    const pageCount = Math.min(doc.numPages, 5);
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const images: string[] = [];
+
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await doc.getPage(i);
+      const scale = 1.5;
+      const viewport = page.getViewport({ scale });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      images.push(canvas.toDataURL("image/png"));
+    }
+
+    return images;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,16 +52,20 @@ export default function PdfUploadForm({ userId, onSuccess }: PdfUploadFormProps)
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("user_id", userId);
-      formData.append("title", title || file.name.replace(/\.[^/.]+$/, ""));
-      formData.append("subject", subject);
-      if (questionCount > 0) formData.append("question_count", String(questionCount));
+      const pageImages = await renderPdfToImages(file);
+      if (pageImages.length === 0) throw new Error("Could not render PDF pages");
 
       const res = await fetch("/api/assignments/generate-from-pdf", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          title: title || file.name.replace(/\.[^/.]+$/, ""),
+          subject,
+          question_count: questionCount,
+          page_images: pageImages,
+          file_name: file.name,
+        }),
       });
 
       const data = await res.json();
@@ -61,6 +91,7 @@ export default function PdfUploadForm({ userId, onSuccess }: PdfUploadFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-4">
+      <canvas ref={canvasRef} className="hidden" />
       <div
         onClick={() => inputRef.current?.click()}
         className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all"
@@ -81,55 +112,33 @@ export default function PdfUploadForm({ userId, onSuccess }: PdfUploadFormProps)
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
           placeholder="Auto-detected from content"
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-        />
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Subject (optional)</label>
-        <input
-          type="text"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
+        <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)}
           placeholder="e.g. Mathematics, Science"
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-        />
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Max questions <span className="text-gray-400 font-normal">(optional, default 10)</span></label>
-        <input
-          type="number"
-          min={1}
-          max={50}
-          value={questionCount}
-          onChange={(e) => setQuestionCount(Number(e.target.value))}
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-        />
+        <input type="number" min={1} max={50} value={questionCount} onChange={(e) => setQuestionCount(Number(e.target.value))}
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
       </div>
 
       {error && (
         <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          {error}
+          <AlertCircle className="w-4 h-4 shrink-0" />{error}
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={!file || loading}
-        className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-primary text-white font-semibold text-sm rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-      >
-        {loading ? (
-          <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
-        ) : (
-          <><FileUp className="w-4 h-4" /> Generate from PDF</>
-        )}
+      <button type="submit" disabled={!file || loading}
+        className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-primary text-white font-semibold text-sm rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><FileUp className="w-4 h-4" /> Generate from PDF</>}
       </button>
     </form>
   );

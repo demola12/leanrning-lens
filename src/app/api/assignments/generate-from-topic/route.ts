@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/activities";
+import { callLLM } from "@/lib/llm";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,11 +24,6 @@ export async function POST(req: NextRequest) {
 
     if (!teacher) {
       return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
-    }
-
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "LLM API key not configured" }, { status: 500 });
     }
 
     const count = Math.min(Math.max(question_count || 5, 3), 15);
@@ -57,34 +53,12 @@ Rules:
 - For multiple_choice, provide 4 options
 - For true_false, options are ["True", "False"]`;
 
-    const llmRes = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate questions from the following content:\n\n${topic.slice(0, 30000)}${subject ? `\n\nSubject area: ${subject}` : ""}` },
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
+    const userPrompt = `Generate questions from the following content:\n\n${topic.slice(0, 30000)}${subject ? `\n\nSubject area: ${subject}` : ""}`;
+
+    const content = await callLLM({
+      systemPrompt,
+      userPrompt,
     });
-
-    if (!llmRes.ok) {
-      const errText = await llmRes.text();
-      return NextResponse.json({ error: `LLM API error: ${errText}` }, { status: 502 });
-    }
-
-    const llmData = await llmRes.json();
-    const content = llmData.choices?.[0]?.message?.content;
-
-    if (!content) {
-      return NextResponse.json({ error: "LLM returned empty response" }, { status: 502 });
-    }
 
     const cleaned = content.replace(/```(?:json)?\s*/gi, "").replace(/\s*```/g, "").trim();
 

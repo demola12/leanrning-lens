@@ -224,7 +224,7 @@ export default function TeacherAssignmentsPage() {
                       <div className="absolute right-0 top-full mt-1 w-44 py-2 rounded-lg bg-white border border-gray-100 shadow-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20">
                         <button
                           onClick={() => handleEdit(tmpl.id)}
-                          className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4" />
                           Edit
@@ -232,7 +232,7 @@ export default function TeacherAssignmentsPage() {
                         <button
                           onClick={() => handleDuplicate(tmpl.id)}
                           disabled={duplicating === tmpl.id}
-                          className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer"
                         >
                           <Copy className="w-4 h-4" />
                           {duplicating === tmpl.id ? "Duplicating..." : "Duplicate"}
@@ -240,7 +240,7 @@ export default function TeacherAssignmentsPage() {
                         <button
                           onClick={() => handleDelete(tmpl.id)}
                           disabled={deleting === tmpl.id}
-                          className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                           {deleting === tmpl.id ? "Deleting..." : "Delete"}

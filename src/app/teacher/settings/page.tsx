@@ -85,6 +85,12 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
 
   const [deleting, setDeleting] = useState(false);
+  const [notifications, setNotifications] = useState<Record<string, boolean>>({
+    email: true,
+    reminders: true,
+    weekly: false,
+    updates: false,
+  });
   const { subscription, loading: subLoading, createCheckoutSession, openPortal, cancelSubscription, resumeSubscription } = useSubscription();
 
   useEffect(() => {
@@ -239,9 +245,22 @@ export default function SettingsPage() {
               <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold">
                 {profile?.full_name?.split(" ").map((n) => n[0]).join("") || "?"}
               </div>
-              <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
+              <button onClick={() => document.getElementById("teacher-avatar-upload")?.click()} className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors cursor-pointer">
                 <Camera className="w-3.5 h-3.5 text-gray-500" />
               </button>
+              <input id="teacher-avatar-upload" type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !user) return;
+                const form = new FormData();
+                form.append("file", file);
+                form.append("user_id", user.id);
+                const res = await fetch("/api/upload", { method: "POST", body: form });
+                const data = await res.json();
+                if (data.url) {
+                  setProfile((prev) => prev ? { ...prev, avatar_url: data.url } : prev);
+                  await fetch("/api/profile/update-name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: user.id, avatar_url: data.url }) });
+                }
+              }} />
             </div>
             <div>
               <h2 className="text-base font-bold text-gray-900">{profile?.full_name}</h2>
@@ -512,14 +531,11 @@ export default function SettingsPage() {
             </div>
           ) : (
             <>
-              {/* Current Plan */}
               <div>
                 <h3 className="text-sm font-bold text-gray-800 mb-3">Current Plan</h3>
                 <div className="flex items-center justify-between p-5 rounded-lg border border-gray-200 bg-white">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      subscription?.plan === "unlimited" ? "bg-amber-50" : subscription?.plan === "family" ? "bg-primary/5" : subscription?.plan === "solo" ? "bg-blue-50" : "bg-gray-100"
-                    }`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${subscription?.plan === "unlimited" ? "bg-amber-50" : subscription?.plan === "family" ? "bg-primary/5" : subscription?.plan === "solo" ? "bg-blue-50" : "bg-gray-100"}`}>
                       {subscription?.plan === "unlimited" ? <Crown className="w-5 h-5 text-amber-500" /> :
                        subscription?.plan === "family" ? <Users className="w-5 h-5 text-primary" /> :
                        subscription?.plan === "solo" ? <Star className="w-5 h-5 text-blue-500" /> :
@@ -536,20 +552,24 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${subscription?.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
-                    {subscription?.status === "active" ? "Active" : subscription?.status || "Active"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${subscription?.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                      {subscription?.status === "active" ? "Active" : subscription?.status || "Active"}
+                    </span>
+                    {!subscription?.plan && (
+                      <button onClick={() => createCheckoutSession("solo")} className="px-4 py-1.5 rounded-md text-xs font-semibold bg-primary text-white hover:bg-primary-dark transition-all cursor-pointer">Upgrade</button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Upgrade Plan */}
               <div>
                 <h3 className="text-sm font-bold text-gray-800 mb-3">Upgrade Plan</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
-                    { id: "solo", name: "Solo ⭐", price: "£5.99", period: "/month", desc: "For one student", icon: Star, color: "text-blue-500", border: "border-blue-200", features: ["1 student profile", "Unlimited assignments", "AI-powered grading", "Progress tracking", "Multi-teacher support", "PDF export"] },
-                    { id: "family", name: "Family", price: "£10.99", period: "/month", desc: "Up to 3 students", icon: Users, color: "text-primary", border: "border-primary", features: ["Up to 3 student profiles", "Unlimited assignments", "AI-powered grading", "Parent dashboard", "Family management", "Priority support"], popular: true },
-                    { id: "unlimited", name: "Unlimited", price: "£20.99", period: "/month", desc: "Unlimited students", icon: Crown, color: "text-amber-500", border: "border-amber-200", features: ["Unlimited student profiles", "Everything in Family", "Priority support"] },
+                    { id: "solo", name: "Solo ⭐", price: "£5.99", period: "/month", desc: "For one student", icon: Star, color: "text-blue-500", features: ["1 student profile", "Unlimited assignments", "AI-powered grading", "Progress tracking", "Multi-teacher support", "PDF export"] },
+                    { id: "family", name: "Family", price: "£10.99", period: "/month", desc: "Up to 3 students", icon: Users, color: "text-primary", features: ["Up to 3 student profiles", "Unlimited assignments", "AI-powered grading", "Parent dashboard", "Family management", "Priority support"], popular: true },
+                    { id: "unlimited", name: "Unlimited", price: "£20.99", period: "/month", desc: "Unlimited students", icon: Crown, color: "text-amber-500", features: ["Unlimited student profiles", "Everything in Family", "Priority support"] },
                   ].map((plan: any) => {
                     const Icon = plan.icon;
                     const isCurrent = subscription?.plan === plan.id;
@@ -558,24 +578,11 @@ export default function SettingsPage() {
                         {plan.popular && !isCurrent && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-primary text-white text-xs font-semibold">Most Popular</div>}
                         <Icon className={`w-8 h-8 ${plan.color} mb-3`} />
                         <h3 className="text-base font-bold text-gray-900">{plan.name}</h3>
-                        <div className="mt-1 flex items-baseline gap-0.5">
-                          <span className="text-2xl font-bold text-gray-900">{plan.price}</span>
-                          <span className="text-sm text-gray-400">{plan.period}</span>
-                        </div>
+                        <div className="mt-1 flex items-baseline gap-0.5"><span className="text-2xl font-bold text-gray-900">{plan.price}</span><span className="text-sm text-gray-400">{plan.period}</span></div>
                         <p className="mt-1 text-xs text-gray-400">{plan.desc}</p>
-                        <ul className="mt-5 space-y-2.5">
-                          {plan.features.map((f: string) => (
-                            <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />{f}
-                            </li>
-                          ))}
-                        </ul>
+                        <ul className="mt-5 space-y-2.5">{plan.features.map((f: string) => (<li key={f} className="flex items-center gap-2 text-xs text-gray-600"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />{f}</li>))}</ul>
                         <button disabled={isCurrent} onClick={() => createCheckoutSession(plan.id)}
-                          className={`mt-6 w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                            isCurrent ? "bg-primary/10 text-primary cursor-default" :
-                            plan.popular ? "bg-primary text-white hover:bg-primary-dark" :
-                            "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"
-                          }`}>
+                          className={`mt-6 w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${isCurrent ? "bg-primary/10 text-primary cursor-default" : plan.popular ? "bg-primary text-white hover:bg-primary-dark" : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"}`}>
                           {isCurrent ? "Current Plan" : "Upgrade"}
                         </button>
                       </div>
@@ -584,16 +591,13 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Billing History */}
               <div className="border border-gray-200 rounded-lg p-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <CreditCard className="w-5 h-5 text-gray-400" />
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800">Billing History & Payment Method</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {subscription?.stripe_customer_id ? "View invoices, update payment method, and manage billing through Stripe." : "No payment method on file."}
-                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">{subscription?.stripe_customer_id ? "View invoices, update payment method, and manage billing through Stripe." : "No payment method on file."}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -604,14 +608,10 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Cancel Subscription */}
               {subscription?.plan && subscription?.status === "active" && (
                 <div className="border border-red-200 rounded-lg p-5">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-red-600">Cancel Subscription</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">Your subscription will remain active until the end of the current billing period.</p>
-                    </div>
+                    <div><h3 className="text-sm font-bold text-red-600">Cancel Subscription</h3><p className="text-xs text-gray-500 mt-0.5">Your subscription will remain active until the end of the current billing period.</p></div>
                     <button onClick={cancelSubscription} className="px-4 py-2 rounded-lg bg-white border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50 transition-all">Cancel Plan</button>
                   </div>
                 </div>
@@ -626,20 +626,21 @@ export default function SettingsPage() {
         <div className="border border-gray-200 rounded-lg p-6">
           <div className="space-y-5">
             {[
-              { label: "Email notifications", desc: "Receive emails about assignment updates and results", enabled: true },
-              { label: "Assignment reminders", desc: "Get reminded about upcoming and overdue assignments", enabled: true },
-              { label: "Weekly summary", desc: "Receive a weekly summary of progress and activity", enabled: false },
-              { label: "Product updates", desc: "Get notified about new features and improvements", enabled: false },
+              { key: "email", label: "Email notifications", desc: "Receive emails about assignment updates and results" },
+              { key: "reminders", label: "Assignment reminders", desc: "Get reminded about upcoming and overdue assignments" },
+              { key: "weekly", label: "Weekly summary", desc: "Receive a weekly summary of progress and activity" },
+              { key: "updates", label: "Product updates", desc: "Get notified about new features and improvements" },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between py-2">
+              <div key={item.key} className="flex items-center justify-between py-2">
                 <div>
                   <span className="text-sm font-medium text-gray-800">{item.label}</span>
                   <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
                 </div>
                 <button
-                  className={`relative w-9 h-5 rounded-full transition-colors ${item.enabled ? "bg-primary" : "bg-gray-200"}`}
+                  onClick={() => setNotifications((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${notifications[item.key] ? "bg-primary" : "bg-gray-200"}`}
                 >
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${item.enabled ? "translate-x-4.5" : "translate-x-0.5"}`} />
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${notifications[item.key] ? "translate-x-4.5" : "translate-x-0.5"}`} />
                 </button>
               </div>
             ))}

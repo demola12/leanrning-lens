@@ -32,10 +32,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    // Generate public URL (bucket is private so use signed URL)
+    // Small delay to let storage settle before generating signed URL
+    await new Promise((r) => setTimeout(r, 500));
+
     const { data: signedUrl } = await supabaseAdmin.storage
       .from("assignments")
-      .createSignedUrl(filename, 60 * 60 * 24 * 365); // 1 year
+      .createSignedUrl(filename, 60 * 60 * 24 * 365);
 
     return NextResponse.json({
       url: signedUrl?.signedUrl || null,

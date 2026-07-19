@@ -83,6 +83,12 @@ export default function SettingsPage() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [childName, setChildName] = useState("");
   const [adding, setAdding] = useState(false);
+  const [notifications, setNotifications] = useState<Record<string, boolean>>({
+    email: true,
+    reminders: true,
+    weekly: false,
+    updates: false,
+  });
   const { subscription, loading: subLoading, createCheckoutSession, openPortal, cancelSubscription, resumeSubscription } = useSubscription();
 
   useEffect(() => {
@@ -325,9 +331,26 @@ export default function SettingsPage() {
               <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold">
                 {profile?.full_name?.split(" ").map((n) => n[0]).join("") || "?"}
               </div>
-              <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
+              <button onClick={() => document.getElementById("avatar-upload")?.click()} className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors cursor-pointer">
                 <Camera className="w-3.5 h-3.5 text-gray-500" />
               </button>
+              <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !user) return;
+                const form = new FormData();
+                form.append("file", file);
+                form.append("user_id", user.id);
+                const res = await fetch("/api/upload", { method: "POST", body: form });
+                const data = await res.json();
+                if (data.url) {
+                  setProfile((prev) => prev ? { ...prev, avatar_url: data.url } : prev);
+                  await fetch("/api/profile/update-name", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: user.id, avatar_url: data.url }),
+                  });
+                }
+              }} />
             </div>
             <div>
               <h2 className="text-base font-bold text-gray-900">{profile?.full_name}</h2>
@@ -526,18 +549,21 @@ export default function SettingsPage() {
         <div className="border border-gray-200 rounded-lg p-6">
           <div className="space-y-5">
             {[
-              { label: "Email notifications", desc: "Receive emails about assignment updates and results", enabled: true },
-              { label: "Assignment reminders", desc: "Get reminded about upcoming and overdue assignments", enabled: true },
-              { label: "Weekly summary", desc: "Receive a weekly summary of progress and activity", enabled: false },
-              { label: "Product updates", desc: "Get notified about new features and improvements", enabled: false },
+              { key: "email", label: "Email notifications", desc: "Receive emails about assignment updates and results" },
+              { key: "reminders", label: "Assignment reminders", desc: "Get reminded about upcoming and overdue assignments" },
+              { key: "weekly", label: "Weekly summary", desc: "Receive a weekly summary of progress and activity" },
+              { key: "updates", label: "Product updates", desc: "Get notified about new features and improvements" },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between py-2">
+              <div key={item.key} className="flex items-center justify-between py-2">
                 <div>
                   <span className="text-sm font-medium text-gray-800">{item.label}</span>
                   <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
                 </div>
-                <button className={`relative w-9 h-5 rounded-full transition-colors ${item.enabled ? "bg-primary" : "bg-gray-200"}`}>
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${item.enabled ? "translate-x-4.5" : "translate-x-0.5"}`} />
+                <button
+                  onClick={() => setNotifications((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${notifications[item.key] ? "bg-primary" : "bg-gray-200"}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${notifications[item.key] ? "translate-x-4.5" : "translate-x-0.5"}`} />
                 </button>
               </div>
             ))}
@@ -578,9 +604,14 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${subscription?.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
-                    {subscription?.status === "active" ? "Active" : subscription?.status || "Active"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${subscription?.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                      {subscription?.status === "active" ? "Active" : subscription?.status || "Active"}
+                    </span>
+                    {!subscription?.plan && (
+                      <button onClick={() => createCheckoutSession("solo")} className="px-4 py-1.5 rounded-md text-xs font-semibold bg-primary text-white hover:bg-primary-dark transition-all cursor-pointer">Upgrade</button>
+                    )}
+                  </div>
                 </div>
               </div>
 
