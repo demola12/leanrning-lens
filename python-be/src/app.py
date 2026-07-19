@@ -25,13 +25,15 @@ def extract_pdf():
         os.makedirs(output_dir, exist_ok=True)
 
         pdf_file.save(input_pdf)
-
+        print(output_dir)
         try:
             result = opendataloader_pdf.convert(
                 input_path=[input_pdf],
                 output_dir=output_dir,
                 format="markdown,json"
             )
+            print("Result:", result)
+            print("Output files:", os.listdir(output_dir))
 
             return jsonify({
                 "status": "success",
