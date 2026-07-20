@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/activities";
+import { requirePlan } from "@/lib/requirePlan";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,11 @@ export async function POST(req: NextRequest) {
 
     if (!user_id || !page_images || !Array.isArray(page_images) || page_images.length === 0) {
       return NextResponse.json({ error: "Missing required fields or page images" }, { status: 400 });
+    }
+
+    const planCheck = await requirePlan(user_id, ["pro", "premium"]);
+    if (!planCheck.allowed) {
+      return NextResponse.json({ error: planCheck.error }, { status: 403 });
     }
 
     const { data: teacher } = await supabaseAdmin

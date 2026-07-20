@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/activities";
 import { callLLM } from "@/lib/llm";
+import { requirePlan } from "@/lib/requirePlan";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,11 @@ export async function POST(req: NextRequest) {
 
     if (!user_id || !topic) {
       return NextResponse.json({ error: "Missing user_id or topic" }, { status: 400 });
+    }
+
+    const planCheck = await requirePlan(user_id, ["pro", "premium"]);
+    if (!planCheck.allowed) {
+      return NextResponse.json({ error: planCheck.error }, { status: 403 });
     }
 
     const { data: teacher } = await supabaseAdmin

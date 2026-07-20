@@ -535,31 +535,24 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-bold text-gray-800 mb-3">Current Plan</h3>
                 <div className="flex items-center justify-between p-5 rounded-lg border border-gray-200 bg-white">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${subscription?.plan === "unlimited" ? "bg-amber-50" : subscription?.plan === "family" ? "bg-primary/5" : subscription?.plan === "solo" ? "bg-blue-50" : "bg-gray-100"}`}>
-                      {subscription?.plan === "unlimited" ? <Crown className="w-5 h-5 text-amber-500" /> :
-                       subscription?.plan === "family" ? <Users className="w-5 h-5 text-primary" /> :
-                       subscription?.plan === "solo" ? <Star className="w-5 h-5 text-blue-500" /> :
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${subscription?.plan === "premium" ? "bg-amber-50" : subscription?.plan === "pro" ? "bg-primary/5" : "bg-gray-100"}`}>
+                      {subscription?.plan === "premium" ? <Crown className="w-5 h-5 text-amber-500" /> :
+                       subscription?.plan === "pro" ? <Sparkles className="w-5 h-5 text-primary" /> :
                        <Zap className="w-5 h-5 text-gray-500" />}
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "No"} Plan</div>
+                      <div className="text-sm font-semibold text-gray-900 capitalize">{subscription?.plan || "Free"} Plan</div>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {!subscription?.plan ? "No active plan" :
-                         subscription?.plan === "solo" ? "For one student" :
-                         subscription?.plan === "family" ? "For up to 3 students" :
-                         "Unlimited students"}
+                        {subscription?.plan === "free" || !subscription?.plan ? "Basic access" :
+                         subscription?.plan === "pro" ? "Full access for educators" :
+                         "Premium for schools"}
                         {subscription?.current_period_end && ` · Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${subscription?.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
-                      {subscription?.status === "active" ? "Active" : subscription?.status || "Active"}
-                    </span>
-                    {!subscription?.plan && (
-                      <button onClick={() => createCheckoutSession("solo")} className="px-4 py-1.5 rounded-md text-xs font-semibold bg-primary text-white hover:bg-primary-dark transition-all cursor-pointer">Upgrade</button>
-                    )}
-                  </div>
+                  <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${subscription?.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                    {subscription?.status === "active" ? "Active" : subscription?.status || "Active"}
+                  </span>
                 </div>
               </div>
 
@@ -567,12 +560,12 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-bold text-gray-800 mb-3">Upgrade Plan</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
-                    { id: "solo", name: "Solo ⭐", price: "£5.99", period: "/month", desc: "For one student", icon: Star, color: "text-blue-500", features: ["1 student profile", "Unlimited assignments", "AI-powered grading", "Progress tracking", "Multi-teacher support", "PDF export"] },
-                    { id: "family", name: "Family", price: "£10.99", period: "/month", desc: "Up to 3 students", icon: Users, color: "text-primary", features: ["Up to 3 student profiles", "Unlimited assignments", "AI-powered grading", "Parent dashboard", "Family management", "Priority support"], popular: true },
-                    { id: "unlimited", name: "Unlimited", price: "£20.99", period: "/month", desc: "Unlimited students", icon: Crown, color: "text-amber-500", features: ["Unlimited student profiles", "Everything in Family", "Priority support"] },
+                    { id: "free", name: "Free", price: "£0", period: "", desc: "Basic access", icon: Zap, color: "text-gray-500", features: ["Limited assignments", "Basic analytics", "Standard support"] },
+                    { id: "pro", name: "Pro", price: "£12", period: "/month", desc: "For educators", icon: Sparkles, color: "text-primary", features: ["Unlimited assignments", "AI-powered grading", "Study plan generator", "Progress tracking", "Priority support"], popular: true },
+                    { id: "premium", name: "Premium", price: "£29", period: "/month", desc: "For schools", icon: Crown, color: "text-amber-500", features: ["Everything in Pro", "Unlimited students", "Admin dashboard", "LMS integration", "Dedicated support"] },
                   ].map((plan: any) => {
                     const Icon = plan.icon;
-                    const isCurrent = subscription?.plan === plan.id;
+                    const isCurrent = subscription?.plan === plan.id || (!subscription?.plan && plan.id === "free");
                     return (
                       <div key={plan.id} className={`relative rounded-lg border-2 p-6 ${isCurrent ? "border-primary bg-primary/5" : plan.popular ? "border-primary bg-white" : "border-gray-200 bg-white"}`}>
                         {plan.popular && !isCurrent && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-primary text-white text-xs font-semibold">Most Popular</div>}
@@ -581,9 +574,9 @@ export default function SettingsPage() {
                         <div className="mt-1 flex items-baseline gap-0.5"><span className="text-2xl font-bold text-gray-900">{plan.price}</span><span className="text-sm text-gray-400">{plan.period}</span></div>
                         <p className="mt-1 text-xs text-gray-400">{plan.desc}</p>
                         <ul className="mt-5 space-y-2.5">{plan.features.map((f: string) => (<li key={f} className="flex items-center gap-2 text-xs text-gray-600"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />{f}</li>))}</ul>
-                        <button disabled={isCurrent} onClick={() => createCheckoutSession(plan.id)}
+                        <button disabled={isCurrent} onClick={() => plan.id !== "free" && createCheckoutSession(plan.id)}
                           className={`mt-6 w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${isCurrent ? "bg-primary/10 text-primary cursor-default" : plan.popular ? "bg-primary text-white hover:bg-primary-dark" : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"}`}>
-                          {isCurrent ? "Current Plan" : "Upgrade"}
+                          {isCurrent ? "Current Plan" : plan.id === "free" ? "Free" : "Upgrade"}
                         </button>
                       </div>
                     );

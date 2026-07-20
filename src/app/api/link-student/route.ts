@@ -7,6 +7,15 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const PLAN_STUDENT_LIMITS: Record<string, number> = {
+  free: 5,
+  pro: Infinity,
+  premium: Infinity,
+  solo: Infinity,
+  family: Infinity,
+  unlimited: Infinity,
+};
+
 export async function POST(req: NextRequest) {
   try {
     const { student_ref_uuid, teacher_ref } = await req.json();
@@ -24,6 +33,29 @@ export async function POST(req: NextRequest) {
 
     if (tErr || !teacher) {
       return NextResponse.json({ error: "Teacher not found with that reference" }, { status: 404 });
+    }
+
+    // Get teacher's subscription plan (defaults to free)
+    const { data: subscription } = await supabaseAdmin
+      .from("subscriptions")
+      .select("plan")
+      .eq("profile_id", teacher.id)
+      .maybeSingle();
+
+    const teacherPlan = (subscription?.plan as string) || "free";
+    const studentLimit = PLAN_STUDENT_LIMITS[teacherPlan] || 5;
+
+    // Count current students
+    const { count: currentCount } = await supabaseAdmin
+      .from("teacher_students")
+      .select("*", { count: "exact", head: true })
+      .eq("teacher_id", teacher.id);
+
+    if (currentCount !== null && currentCount >= studentLimit) {
+      const limitText = studentLimit === Infinity ? "no limit" : `a maximum of ${studentLimit}`;
+      return NextResponse.json({
+        error: `Your ${teacherPlan} plan allows ${limitText} students. Please upgrade to add more.`,
+      }, { status: 403 });
     }
 
     // Get student profile by ref_uuid

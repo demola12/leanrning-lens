@@ -16,24 +16,18 @@ export default function StudentLayout({
   const { loading, authorized } = useRequireRole(["student"]);
   const { user } = useAuth();
   const router = useRouter();
-  const [gatePassed, setGatePassed] = useState(false);
 
   useEffect(() => {
     if (loading || !authorized || !user) return;
-    if (window.location.pathname === "/student/onboarding") {
-      setGatePassed(true);
-      return;
-    }
+    if (window.location.pathname === "/student/onboarding") return;
     fetch(`/api/subscription/status?user_id=${user.id}`)
       .then((r) => r.json())
       .then((sub) => {
         if (!sub || !sub.plan) {
           router.replace("/student/onboarding");
-        } else {
-          setGatePassed(true);
         }
       })
-      .catch(() => setGatePassed(true));
+      .catch(() => {});
   }, [user, loading, authorized, router]);
 
   if (loading) {
@@ -45,14 +39,6 @@ export default function StudentLayout({
   }
 
   if (!authorized) return null;
-
-  if (!gatePassed && window.location.pathname !== "/student/onboarding") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-primary animate-spin" />
-      </div>
-    );
-  }
 
   if (window.location.pathname === "/student/onboarding") {
     return <ProfilesProvider>{children}</ProfilesProvider>;

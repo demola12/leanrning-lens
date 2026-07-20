@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     const { user_id, plan, role } = await req.json();
 
-    if (!user_id || !plan || !["solo", "family", "unlimited"].includes(plan)) {
+    if (!user_id || !plan || !["solo", "family", "unlimited", "pro", "premium"].includes(plan)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 

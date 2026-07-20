@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import PdfUploadForm from "@/components/PdfUploadForm";
 import AutoBuilderForm from "@/components/AutoBuilderForm";
+import { useSubscription } from "@/lib/useSubscription";
+import { Crown, Lock } from "lucide-react";
 
 type Tab = "templates" | "assigned";
 type ModalView = null | "new" | "upload-pdf" | "ai-topic";
@@ -42,6 +44,7 @@ interface Assignment {
 export default function TeacherAssignmentsPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { subscription } = useSubscription();
   const [tab, setTab] = useState<Tab>("templates");
   const [modal, setModal] = useState<ModalView>(null);
   const [search, setSearch] = useState("");
@@ -49,8 +52,11 @@ export default function TeacherAssignmentsPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [showUpgradePopup, setShowUpgradePopup] = useState(false);
 
   const [step, setStep] = useState<"choose" | "assign">("choose");
+
+  const isFree = subscription?.plan === "free" || !subscription?.plan;
 
   const fetchAssignments = useCallback(async () => {
     if (!user) return;
@@ -145,16 +151,20 @@ export default function TeacherAssignmentsPage() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">No assignments yet</h2>
           <p className="text-gray-500 mb-8">Create your first assignment or build a reusable template.</p>
-          <div className="flex gap-4">
-            <button onClick={openNew} className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold text-sm rounded-lg hover:bg-primary-dark transition-all shadow-sm shadow-primary/25">
-              <FileUp className="w-4 h-4" />
-              Upload PDF
-            </button>
-            <button onClick={() => router.push("/teacher/assignments/create")} className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-semibold text-sm rounded-lg border border-gray-200 hover:border-gray-300 transition-all">
-              <PenLine className="w-4 h-4" />
-              Create Manually
-            </button>
-          </div>
+              <div className="flex gap-4">
+                <button onClick={openNew} className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold text-sm rounded-lg hover:bg-primary-dark transition-all shadow-sm shadow-primary/25">
+                  <FileUp className="w-4 h-4" />
+                  Upload PDF
+                </button>
+                <button onClick={() => router.push("/teacher/assignments/create")} className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-semibold text-sm rounded-lg border border-gray-200 hover:border-gray-300 transition-all">
+                  <PenLine className="w-4 h-4" />
+                  Create Manually
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Free plan: Manual builder only.{" "}
+                <span className="text-primary font-semibold cursor-pointer" onClick={() => router.push("/teacher/settings")}>Upgrade</span> to unlock AI generation.
+              </p>
         </div>
       ) : (
         <>
@@ -292,8 +302,8 @@ export default function TeacherAssignmentsPage() {
                 <p className="text-sm text-gray-500">How would you like to create this assignment?</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
-                    { icon: FileUp, title: "Upload PDF", desc: "Extract questions from any PDF automatically", color: "text-primary", action: () => { closeModal(); handleUploadPdf(); } },
-                    { icon: Sparkles, title: "Auto Builder", desc: "Generate questions from a topic or pasted text", color: "text-accent", action: () => { closeModal(); handleAITopic(); } },
+                    { icon: FileUp, title: "Upload PDF", desc: "Extract questions from any PDF automatically", color: "text-primary", action: () => { if (isFree) setShowUpgradePopup(true); else { closeModal(); handleUploadPdf(); } } },
+                    { icon: Sparkles, title: "Auto Builder", desc: "Generate questions from a topic or pasted text", color: "text-accent", action: () => { if (isFree) setShowUpgradePopup(true); else { closeModal(); handleAITopic(); } } },
                     { icon: PenLine, title: "Manual Builder", desc: "Write your own questions from scratch", color: "text-emerald-500", action: () => { closeModal(); router.push("/teacher/assignments/create"); } },
                   ].map((opt) => (
                     <button
@@ -372,6 +382,29 @@ export default function TeacherAssignmentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Upgrade Popup */}
+      {showUpgradePopup && (
+        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpgradePopup(false)}>
+          <div className="w-full max-w-sm bg-white rounded-lg shadow-sm border border-gray-100 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-6 h-6 text-amber-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Upgrade Required</h3>
+              <p className="text-sm text-gray-500 mb-6">This feature is available on Pro and Premium plans. Upgrade now to unlock AI-powered assignment generation.</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => { setShowUpgradePopup(false); router.push("/teacher/settings"); }} className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-all">
+                  Go to Settings
+                </button>
+                <button onClick={() => setShowUpgradePopup(false)} className="w-full py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:border-gray-300 transition-all">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
