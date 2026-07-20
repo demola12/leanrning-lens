@@ -14,7 +14,7 @@ interface TeacherInfo {
 
 export default function StudentDashboardPage() {
   const { user } = useAuth();
-  const { activeProfile } = useProfiles();
+  const { activeProfile, loading: profilesLoading } = useProfiles();
   const [teachers, setTeachers] = useState<TeacherInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,6 +33,14 @@ export default function StudentDashboardPage() {
     };
     fetchTeachers();
   }, [user, activeProfile?.id]);
+
+  if (profilesLoading) {
+    return (
+      <div className="p-8 max-w-4xl flex items-center justify-center py-24">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   if (!activeProfile) {
     return (

@@ -83,6 +83,7 @@ export default function SettingsPage() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [childName, setChildName] = useState("");
   const [adding, setAdding] = useState(false);
+  const [addChildError, setAddChildError] = useState("");
   const [notifications, setNotifications] = useState<Record<string, boolean>>({
     email: true,
     reminders: true,
@@ -197,10 +198,15 @@ export default function SettingsPage() {
   const handleAddChild = async () => {
     if (!childName.trim()) return;
     setAdding(true);
-    await addChild(childName.trim());
-    setChildName("");
+    setAddChildError("");
+    try {
+      await addChild(childName.trim());
+      setChildName("");
+      setShowAddChild(false);
+    } catch (e: any) {
+      setAddChildError(e.message);
+    }
     setAdding(false);
-    setShowAddChild(false);
   };
 
   if (loading) {
@@ -250,6 +256,9 @@ export default function SettingsPage() {
               <div className="bg-white rounded-lg border border-gray-100 shadow-md p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
                 <h3 className="text-base font-bold text-gray-900 mb-2">Add a child</h3>
                 <p className="text-sm text-gray-500 mb-4">Each child gets their own profile, joining code, and teachers.</p>
+                {addChildError && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm mb-4">{addChildError}</div>
+                )}
                 <input
                   type="text"
                   value={childName}

@@ -11,9 +11,15 @@ function toISO(ts: any): string | null {
   if (!ts) return null;
   const num = typeof ts === "number" ? ts : parseInt(ts);
   if (isNaN(num)) return null;
-  // Stripe uses seconds, JS Date uses milliseconds
   const ms = num > 100000000000 ? num : num * 1000;
   return new Date(ms).toISOString();
+}
+
+function generateRefUuid(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
 }
 
 export async function POST(req: NextRequest) {
@@ -35,11 +41,11 @@ export async function POST(req: NextRequest) {
     }
 
     const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
-    const plan = session.metadata?.plan || "pro";
+    const plan = session.metadata?.plan || "solo";
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("id")
+      .select("id, full_name, email")
       .eq("user_id", user_id)
       .is("parent_profile_id", null)
       .single();
@@ -66,6 +72,36 @@ export async function POST(req: NextRequest) {
 
     if (upsertError) {
       return NextResponse.json({ error: upsertError.message }, { status: 500 });
+    }
+
+    // Auto-create a default child profile if none exist
+    const { count } = await supabaseAdmin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("parent_profile_id", profile.id);
+
+    if (count === 0) {
+      let ref_uuid = generateRefUuid();
+      let attempts = 0;
+      while (attempts < 10) {
+        const { data: existing } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("ref_uuid", ref_uuid)
+          .maybeSingle();
+        if (!existing) break;
+        ref_uuid = generateRefUuid();
+        attempts++;
+      }
+
+      await supabaseAdmin.from("profiles").insert({
+        user_id,
+        ref_uuid,
+        full_name: profile.full_name || "My Profile",
+        role: "student",
+        email: profile.email,
+        parent_profile_id: profile.id,
+      });
     }
 
     return NextResponse.json({ success: true, plan, status: sub.status });

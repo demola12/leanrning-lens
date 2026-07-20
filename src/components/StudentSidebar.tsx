@@ -82,7 +82,7 @@ export default function StudentSidebar() {
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-4 h-4 text-primary animate-spin" />
         </div>
-      ) : children.length > 0 ? (
+      ) : activeProfile && children.length > 0 ? (
         <div className="relative px-3 pt-3">
           <button
             onClick={() => setSwitcherOpen(!switcherOpen)}
@@ -135,7 +135,20 @@ export default function StudentSidebar() {
             </div>
           )}
         </div>
-      ) : null}
+      ) : (
+        /* Non-parent student: show simple profile info */
+        <div className="px-3 pt-3 pb-1">
+          <div className="flex items-center gap-3 px-3 py-2.5">
+            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {activeProfile!.full_name?.split(" ").map((n) => n[0]).join("") || "?"}
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-semibold text-gray-900 truncate">{activeProfile!.full_name}</p>
+              <p className="text-xs text-gray-400 truncate">{activeProfile!.ref_uuid}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {addChildOpen && (
         <div className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center p-4" onClick={() => setAddChildOpen(false)}>
@@ -145,14 +158,7 @@ export default function StudentSidebar() {
             {addError && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm mb-4">{addError}</div>
             )}
-            <input
-              type="text"
-              value={childName}
-              onChange={(e) => setChildName(e.target.value)}
-              placeholder="Child's full name"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-4"
-              autoFocus
-            />
+            <input type="text" value={childName} onChange={(e) => setChildName(e.target.value)} placeholder="Child's full name" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-4" autoFocus />
             <div className="flex items-center gap-2 justify-end">
               <button onClick={() => setAddChildOpen(false)} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800">Cancel</button>
               <button onClick={handleAddChild} disabled={adding || !childName.trim()} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark disabled:opacity-60">
