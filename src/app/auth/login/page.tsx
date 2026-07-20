@@ -28,6 +28,8 @@ export default function LoginPage() {
 
     if (error) {
       if (error.message.includes("Email not confirmed")) {
+        setLoading(false);
+        setError("");
         router.push(`/auth/confirm?email=${encodeURIComponent(email)}`);
         return;
       }

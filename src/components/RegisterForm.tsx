@@ -14,13 +14,12 @@ import {
   AlertCircle,
   GraduationCap,
   School,
-  Building2,
   KeyRound,
 } from "lucide-react";
 import AuthNavbar from "@/components/AuthNavbar";
 import Logo from "./Logo";
 
-type Role = "student" | "teacher" | "organization";
+type Role = "student" | "teacher";
 
 export interface RegisterFormProps {
   defaultRole?: Role;
@@ -41,12 +40,6 @@ const roles: { id: Role; label: string; description: string; icon: any }[] = [
     label: "Teacher",
     description: "Create assignments and track student progress",
     icon: School,
-  },
-  {
-    id: "organization",
-    label: "Organization",
-    description: "Manage classes, teachers, and analytics across your institution",
-    icon: Building2,
   },
 ];
 
@@ -148,7 +141,7 @@ export default function RegisterForm({
               <label className="block text-sm font-semibold text-gray-700 mb-3 text-center">
                 I am a...
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {roles.map((r) => {
                   const Icon = r.icon;
                   const selected = role === r.id;
@@ -211,9 +204,7 @@ export default function RegisterForm({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={
-                    role === "organization"
-                      ? "Your institution name"
-                      : role === "teacher"
+                    role === "teacher"
                       ? "Ms. Johnson"
                       : "Alex Thompson"
                   }
@@ -233,7 +224,7 @@ export default function RegisterForm({
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={role === "organization" ? "admin@school.edu" : "you@school.edu"}
+                  placeholder={role === "teacher" ? "you@school.edu" : "you@school.edu"}
                   required
                   className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
@@ -274,9 +265,7 @@ export default function RegisterForm({
                 ? "Creating account..."
                 : role === "student"
                 ? "Create Student Account"
-                : role === "teacher"
-                ? "Create Teacher Account"
-                : "Create Organization Account"}
+                : "Create Teacher Account"}
               {!loading && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>
